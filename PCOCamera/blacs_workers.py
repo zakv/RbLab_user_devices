@@ -110,7 +110,7 @@ class PCOCamera(object):
         # in use.
         global instrumental
         import instrumental
-        import labscript_devices.PCOCamera.pco_sdk_wrappers as pco_sdk_wrappers
+        import userlib.user_devices.RbLab.PCOCamera.pco_sdk_wrappers as pco_sdk_wrappers
         global ffi
         ffi = pco_sdk_wrappers.ffi
         global NicePCO
