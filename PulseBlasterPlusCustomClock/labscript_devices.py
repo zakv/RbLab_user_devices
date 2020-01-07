@@ -12,7 +12,6 @@ CUSTOM_CORE_CLOCK_FREQ = 180.0  # MHz
 class PulseBlasterPlusCustomClock(PulseBlaster_No_DDS):
     description = 'SpinCore "PulseBlaster Plus!" with Custom 180 MHz Clock Oscillator'
     clock_limit = 8.3e6  # can probably go faster
-    # TODO: Update clock resolution, to 2./CUSTOM_CORE_CLOCK_FREQ
-    clock_resolution = 20e-9
+    clock_resolution = 2. / (CUSTOM_CORE_CLOCK_FREQ * 1e6)  # 1e6 for MHz->Hz
     n_flags = 24
     core_clock_freq = CUSTOM_CORE_CLOCK_FREQ
