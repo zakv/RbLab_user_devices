@@ -1,6 +1,0 @@
-from labscript_devices.PulseBlaster_No_DDS import PulseblasterNoDDSWorker
-from userlib.user_devices.RbLab.PulseBlasterPlusCustomClock.labscript_devices import CUSTOM_CORE_CLOCK_FREQ
-
-
-class PulseBlasterPlusCustomClockWorker(PulseblasterNoDDSWorker):
-    core_clock_freq = CUSTOM_CORE_CLOCK_FREQ
