@@ -4,13 +4,14 @@
 
 This Labscript device module is intended to work with PCO cameras.
 Most of its classes inherit from the corresponding classes of IMAQdxCamera, which is how most of the interfacing with BLACS and Labscript is performed.
-Communication with the camera is done through PCO's SDK.
+Communication with the camera is done through PCO's Windows SDK.
+There is a Linux SDK available from PCO, but it is not currently supported by this package.
 The SDK's functions are wrapped with python using the python package Instrumental, which in turn uses the python packages NiceLib and CFFI.
 
 ## Supported Models
 
 During development, this module was tested with a PCO Pixelfly USB and the PCO SDK v1.24 on a Windows 10 machine.
-It is intended to be compatible with other camera models from PCO that use the PCO SDK, but they have not been tested.
+It is intended to be compatible with other camera models from PCO that use the PCO SDK for Windows, but they have not been tested.
 If you try out a different camera model, let us know if it works or if you run into issues!
 Note that not all functions in the PCO SDK are supported by all cameras, so e.g. setting a value for `IRSensitivity` in the connection table's `camera_attributes` will cause a camera to throw an error if it doesn't support the `PCO_SetIRSensitivity` command.
 See the PCO SDK's manual for a list of compatible camera models for each command.
@@ -28,6 +29,7 @@ The subsections below list the required an suggested steps.
 
 In addition to the Labscript suite, the following software needs to be installed in order to use this module:
 
+* Windows (Linux isn't supported)
 * Python 3 (Python 2 isn't supported)
 * The PCO SDK
 * The PCO Interface driver for the camera's interface type (e.g. USB)
