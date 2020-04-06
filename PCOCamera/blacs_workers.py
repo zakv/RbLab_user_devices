@@ -78,11 +78,10 @@ class PCOCamera(object):
     """A high-level interface for working with PCO cameras.
 
     Mid-level interfacing to the PCO SDK's library S2C_Cam.dll is performed via
-    the python packages Instrumental, NiceLib, and CFFI as well as some
-    additional code included in pco_sdk_wrappers.py in this directory. This code
-    is not designed to be used directly, but rather called by labscript. For
-    that reason the distinction between public and private methods and
-    properties is done somewhat haphazardly.
+    the python packages Instrumental, NiceLib, and CFFI. This code is not
+    designed to be used directly, but rather called by labscript. For that
+    reason the distinction between public and private methods and properties is
+    done somewhat haphazardly.
 
     Attributes:
         attribute_names: A list of strings, each of which is the name of a
@@ -110,13 +109,14 @@ class PCOCamera(object):
         # in use.
         global instrumental
         import instrumental
-        import userlib.user_devices.RbLab.PCOCamera.pco_sdk_wrappers as pco_sdk_wrappers
+        import instrumental.drivers.cameras.pco
+        import instrumental.errors
         global ffi
-        ffi = pco_sdk_wrappers.ffi
+        ffi = instrumental.drivers.cameras.pco.ffi
         global NicePCO
-        NicePCO = pco_sdk_wrappers.NicePCO
+        NicePCO = instrumental.drivers.cameras.pco.NicePCO
         global PCOError
-        PCOError = pco_sdk_wrappers.PCOError
+        PCOError = instrumental.errors.PCOError
 
         # Connect to camera
         self._open_camera(serial_number)
@@ -176,7 +176,7 @@ class PCOCamera(object):
         looking_for_camera = True
         while looking_for_camera:
             try:
-                camera_handle = NicePCO.OpenCamera()
+                camera_handle = NicePCO.OpenCamera(ffi.NULL)
             except PCOError as err:
                 # See if error code corresponds to not finding any more cameras
                 if err.return_code == PCOError.hex_string_to_return_code(
