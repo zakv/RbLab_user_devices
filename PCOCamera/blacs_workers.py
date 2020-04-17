@@ -623,10 +623,10 @@ class PCOCamera(object):
     def _get_image_from_buffer(self, buffer_info):
         """Get data from buffer into a numpy array.
 
-        This function applies the ROI setting and the fliplr/flipud settings as
-        the data is transferred from the buffer. It is also worth noting that
-        the data is copied, so the buffer can be used again without overwriting
-        the data.
+        This function applies the fliplr/flipud settings and the ROI setting as
+        the data is transferred from the buffer. The fliplr/flipud settings are
+        applied before taking the ROI. It is also worth noting that the data is
+        copied, so the buffer can be used again without overwriting the data.
 
         Args:
             buffer_info: An instance of the BufferInfo class from
@@ -647,18 +647,18 @@ class PCOCamera(object):
         array = np.frombuffer(buffer_data, np.uint16)
         array = array.reshape((image_height_pixels, image_width_pixels))
 
+        # Reverse array directions if configured to do so
+        if self.fliplr:
+            array = np.fliplr(array)
+        if self.flipud:
+            array = np.flipud(array)
+
         # Implement ROI
         x_index_min = self.ROI['offsetX']
         x_index_max = self.ROI['offsetX'] + self.ROI['width']
         y_index_min = self.ROI['offsetY']
         y_index_max = self.ROI['offsetY'] + self.ROI['height']
         array = array[y_index_min:y_index_max, x_index_min:x_index_max]
-
-        # Reverse array directions if configured to do so
-        if self.fliplr:
-            array = np.fliplr(array)
-        if self.flipud:
-            array = np.flipud(array)
 
         # Copy data out of buffer, which also makes it contiguous for BLACS
         array = array.copy()
