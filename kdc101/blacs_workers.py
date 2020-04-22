@@ -19,66 +19,132 @@ from labscript_devices.ZaberStageController.blacs_workers import \
     MockZaberInterface
 from labscript_utils import dedent
 
+# Create module globals for importing device-specific libraries then we'll
+# import them later. That way labscript only needs those libraries installed if
+# one of these devices is actually used.
 clr = None
 System = None
+DeviceManagerCLI = None
+KCubeDCServo = None
 
-TIMEOUT = 60
 
-
-class MockActuatorsGroup(MockZaberInterface):
-    def __init__(self):
+class _MockKDC101Interface(MockZaberInterface):
+    def __init__(self, serial_number):
+        self.serial_number = serial_number
         from collections import defaultdict
         self.positions = defaultdict(int)
 
 
-class ActuatorsGroup(object):
-    def __init__(self):
+class _KDC101Interface(object):
+
+    # Configuraion constants.
+    default_timeout = int(60e3)  # Timeout in ms.
+    polling_interval = 250  # Polling period in ms.
+
+    def __init__(self, serial_number):
+        # Store serial number.
+        self.serial_number = serial_number
+
+        # Import required python libraries.
         global clr
         global System
         try:
             import clr
-            from System import Decimal
+            import System
         except ImportError:
             message = """Could not import clr and System. Please ensure that
                 pythonnet is installed, which is possible via pip or conda."""
             raise ImportError(dedent(message))
 
-    def move(self, serial_number, position):
-        device = zaber.BinaryDevice(self.port, device_number)
-        device.move_abs(position)
-        deadline = monotonic() + TIMEOUT
-        while device.get_position() != position:
-            if monotonic() > deadline:
-                msg = "Device did not move to requested position within timeout"
-                raise TimeoutError(msg)
+        # Use pythonnet to import necessary .NET libraries.
+        # TODO: Deal with paths in a smarter way.
+        sys.path.append(r"C:\Program Files\Thorlabs\Kinesis")
+        try:
+            # Import DeviceManagerCLI into .NET's Common Language Runtime (CLR) so
+            # we can then import it into python.
+            global DeviceManagerCLI
+            clr.AddReference("Thorlabs.MotionControl.DeviceManagerCLI")
+            from Thorlabs.MotionControl.DeviceManagerCLI import DeviceManagerCLI
+            # Import class that controls KDC101.
+            global KCubeDCServo
+            clr.AddReference("Thorlabs.MotionControl.KCube.DCServoCLI")
+            from Thorlabs.MotionControl.KCube.DCServoCLI import KCubeDCServo
+        except System.IO.FileNotFoundException:
+            msg = """Could not find Thorlabs Kinesis drivers, ensure that the
+                Kinesis folder is included in sys.path."""
+            raise System.IO.FileNotFoundException(msg)
 
-    def get_position(self, device_number):
-        device = zaber.BinaryDevice(self.port, device_number)
-        return device.get_position()
+        # Build device list so that drivers can find the controllers when we
+        # try to connect to them.
+        DeviceManagerCLI.BuildDeviceList()
+
+        # Create the KCube DCServo device.
+        self.controller = KCubeDCServo.CreateDevice(str(self.serial_number))
+
+        # Open a connection to the device.
+        self.controller.Connect(str(self.serial_number))
+
+        # Start the device polling.
+        # The polling loop requests regular status requests to the motor to
+        # ensure the program keeps track of the device.
+        self.controller.StartPolling(int(self.polling_interval))
+        time.sleep(0.5)
+
+        # Enable the channel otherwise any move is ignored.
+        self.controller.EnableDevice()
+        time.sleep(0.5)
+
+        # Call LoadMotorConfiguration on the device to initialize the
+        # DeviceUnitConverter object required for real world unit parameters.
+        # Loads configuration information into channel.
+        motor_configuration = self.controller.LoadMotorConfiguration(
+            str(self.serial_number)
+        )
+
+        # The API requires stage type to be specified.
+        # Name of motor or stage being controlled (check in Kinesis GUI).
+        # device_settings_name = 'Z812'
+        # motor_configuration.DeviceSettingsName = device_settings_name
+
+        # Get the device unit converter.
+        motor_configuration.UpdateCurrentConfiguration()
+
+        # Home the device if it hasn't been homed.
+        if not self.controller.Status.IsHomed:
+            print("Homing device...")
+            self.controller.Home(int(self.default_timeout))
+            print("Device homed.")
+
+    def move(self, position):
+        self.controller.MoveTo(System.Decimal(position), self.default_timeout)
+
+    def get_position(self):
+        return float(str(self.controller.Position))
 
     def close(self):
-        self.port.close()
+        # Stop the driver's periodic checks on the actuator position.
+        self.controller.StopPolling()
+
+        # Close the connection to the controller.
+        self.controller.Disconnect(True)
 
 
-class ActuatorsWorker(Worker):
+class KDC101Worker(Worker):
     def init(self):
         if self.mock:
-            self.controller = MockActuatorsGroup()
+            self.controller = _MockKDC101Interface(self.serial_number)
         else:
-            self.controller = ActuatorsGroup()
+            self.controller = _KDC101Interface(self.serial_number)
 
     def check_remote_values(self):
         remote_values = {}
         for connection in self.child_connections:
-            device_number = get_device_number(connection)
-            remote_values[connection] = self.controller.get_position(
-                device_number)
+            remote_values[connection] = self.controller.get_position()
         return remote_values
 
     def program_manual(self, values):
-        for connection, value in values.items():
-            device_number = get_device_number(connection)
-            self.controller.move(device_number, int(round(value)))
+        for _, value in values.items():
+            self.controller.move(value)
         return self.check_remote_values()
 
     def transition_to_buffered(

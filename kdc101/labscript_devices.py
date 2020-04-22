@@ -12,7 +12,7 @@ from labscript import StaticAnalogQuantity, IntermediateDevice, set_passed_prope
 import numpy as np
 
 
-class Actuator(StaticAnalogQuantity):
+class BrushedDCServoMotor(StaticAnalogQuantity):
 
     default_limits = (0, np.inf)
     description = "Generic Actuator"
@@ -38,27 +38,32 @@ class Actuator(StaticAnalogQuantity):
         StaticAnalogQuantity.__init__(self, *args, limits=limits, **kwargs)
 
 
-# Child classes for specific models of stages, which have knowledge of their valid
-# ranges:
-class KDC101(Actuator):
-    default_limits = (0, 76346)
-    description = "KDC101 Servo Motor Controller"
+# Classes for specific models, which have knowledge of their valid ranges:
+class Z812(BrushedDCServoMotor):
+    default_limits = (0, 12)
+    description = "Z812 Brushed DC Servo Motor"
 
 
-class ActuatorsController(IntermediateDevice):
-    allowed_children = [Actuator]
+class KDC101(IntermediateDevice):
+    allowed_children = [BrushedDCServoMotor]
 
     @set_passed_properties(
-        property_names={"connection_table_properties": ["mock"]}
+        property_names={
+            "connection_table_properties": ["serial_number", "mock"],
+        }
     )
     def __init__(self, name, mock=False, **kwargs):
-        """Device for controlling a number of actuators.
+        """Device for controlling a KDC101.
 
-        Add stages as child devices, either by using one of the model-specific
-        classes in this module, or the generic `Actuator` class.
+        Add the brushled DC servo motor controlled by this KDC101 as a child
+        device. You can use either a model-specific class or the generic
+       `BrushedDCServoMotor` class.
 
         Args:
             name (str): The name to give to this group of actuators.
+            serial_number (int): The serial number of the KDC101, which is
+                labeled on the device itself. Alternatively it can be determined
+                by looking at the device in the Kinesis GUI software.
             mock (bool, optional): (Default=False) If set to True then no real
                 actuator will be used. Instead a dummy that simply prints what
                 a real stage would do is used instead. This is helpful for
@@ -70,11 +75,18 @@ class ActuatorsController(IntermediateDevice):
 
     def generate_code(self, hdf5_file):
         IntermediateDevice.generate_code(self, hdf5_file)
-        stages = {stage.connection: stage for stage in self.child_devices}
-        connections = sorted(stages, key=get_device_number)
-        dtypes = [(connection, int) for connection in connections]
+
+        # Get dictionary of actuators with their connections as they keys.
+        actuators = {
+            actuator.connection: actuator for actuator in self.child_devices}
+
+        # Make a sorted list of the connections.
+        connections = sorted(actuators.keys())
+
+        # Construct data for hdf5 file.
+        dtypes = [(connection, np.float64) for connection in connections]
         static_value_table = np.empty(1, dtype=dtypes)
-        for connection, stage in stages.items():
+        for connection, actuator in actuators.items():
             static_value_table[connection][0] = stage.static_value
         grp = self.init_device_group(hdf5_file)
         grp.create_dataset('static_values', data=static_value_table)

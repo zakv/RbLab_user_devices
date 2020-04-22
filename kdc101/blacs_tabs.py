@@ -11,10 +11,10 @@
 from blacs.device_base_class import DeviceTab
 
 
-class ActuatorsGroupTab(DeviceTab):
+class KDC101Tab(DeviceTab):
     def initialise_GUI(self):
         # Capabilities
-        self.base_units = 'steps'
+        self.base_units = 'mm'
         self.base_min = 0
         self.base_step = 100
         self.base_decimals = 0
@@ -56,7 +56,7 @@ class ActuatorsGroupTab(DeviceTab):
         # Create and set the primary worker
         self.create_worker(
             'main_worker',
-            'userlib.user_devices.RbLab.actuators_group.blacs_workers.ActuatorsGroupWorker',
+            'userlib.user_devices.RbLab.kdc101.blacs_workers.KDC101Worker',
             {
                 'mock': self.mock,
                 'child_connections': self.child_connections,

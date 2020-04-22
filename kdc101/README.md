@@ -1,9 +1,10 @@
-# ActuatorsGroup
+# KDC101
 
 ## Introduction
 
-This code implements some Thorlabs motion control products as static outputs.
-It is based on the Zaber stage software from the official labscript_devices repo.
+This directory contains the code necessary to use a Thorlabs KDC101 brushed DC servo motor controller.
+The KDC101 is capable of controlling various pieces of hardware.
+As of this writing, these pieces of hardware are typically controlled by the Z8 series of brushed DC servo motors, such as the Z812.
 
 ## Installation
 

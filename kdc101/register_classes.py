@@ -11,7 +11,7 @@
 from labscript_devices import register_classes
 
 register_classes(
-    'ActuatorController',
-    BLACS_tab='userlib.user_devices.RbLab.actuators_group.blacs_tabs.ActuatorsGroupTab',
+    'KDC101',
+    BLACS_tab='userlib.user_devices.RbLab.kdc101.blacs_tabs.KDC101Tab',
     runviewer_parser=None,
 )
