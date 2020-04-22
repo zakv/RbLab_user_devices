@@ -52,7 +52,7 @@ class KDC101(IntermediateDevice):
             "connection_table_properties": ["serial_number", "mock"],
         }
     )
-    def __init__(self, name, mock=False, **kwargs):
+    def __init__(self, name, serial_number, mock=False, **kwargs):
         """Device for controlling a KDC101.
 
         Add the brushled DC servo motor controlled by this KDC101 as a child
@@ -87,6 +87,6 @@ class KDC101(IntermediateDevice):
         dtypes = [(connection, np.float64) for connection in connections]
         static_value_table = np.empty(1, dtype=dtypes)
         for connection, actuator in actuators.items():
-            static_value_table[connection][0] = stage.static_value
+            static_value_table[connection][0] = actuator.static_value
         grp = self.init_device_group(hdf5_file)
         grp.create_dataset('static_values', data=static_value_table)
