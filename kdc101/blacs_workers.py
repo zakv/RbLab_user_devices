@@ -35,6 +35,9 @@ class _MockKDC101Interface(MockZaberInterface):
         from collections import defaultdict
         self.position = 0
 
+    def home(self):
+        print("Mock device homed.")
+
     def move(self, position):
         print(f"Mock move device to position {position}")
         self.position = position
@@ -117,11 +120,14 @@ class _KDC101Interface(object):
         # Get the device unit converter.
         motor_configuration.UpdateCurrentConfiguration()
 
-        # Home the device if it hasn't been homed.
-        if not self.controller.Status.IsHomed:
-            print("Homing device...")
-            self.controller.Home(int(self.default_timeout))
-            print("Device homed.")
+    @property
+    def is_homed(self):
+        return self.controller.Status.IsHomed
+
+    def home(self):
+        print("Homing...")
+        self.controller.Home(self.default_timeout)
+        print("Finshed Homing.")
 
     def move(self, position):
         self.controller.MoveTo(System.Decimal(position), self.default_timeout)
@@ -143,6 +149,14 @@ class KDC101Worker(Worker):
             self.controller = _MockKDC101Interface(self.serial_number)
         else:
             self.controller = _KDC101Interface(self.serial_number)
+        if not self.controller.is_homed:
+            if self.allow_homing:
+                self.controller.home()
+            else:
+                self.controller.close()
+                message = """Device isn't homed and is not allowed to home.
+                    Please home using Kinesis GUI then restart device."""
+                raise RuntimeError(dedent(message))
 
     def check_remote_values(self):
         remote_values = {}

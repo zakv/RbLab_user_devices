@@ -49,10 +49,12 @@ class KDC101(IntermediateDevice):
 
     @set_passed_properties(
         property_names={
-            "connection_table_properties": ["serial_number", "mock"],
+            "connection_table_properties":
+                ["serial_number", "allow_homing", "mock"],
         }
     )
-    def __init__(self, name, serial_number, mock=False, **kwargs):
+    def __init__(self, name, serial_number,
+                 allow_homing, mock=False, **kwargs):
         """Device for controlling a KDC101.
 
         Add the brushled DC servo motor controlled by this KDC101 as a child
@@ -64,6 +66,15 @@ class KDC101(IntermediateDevice):
             serial_number (int): The serial number of the KDC101, which is
                 labeled on the device itself. Alternatively it can be determined
                 by looking at the device in the Kinesis GUI software.
+            allow_homing (bool): If the device needs to be homed (i.e. it has
+                not been homed since it was last powered on) then it will be
+                homed if allow_homing is True. If allow_homing is False and the
+                device is not already homed, a RuntimeError will be raised. This
+                is useful e.g. if the actuator controls a high power beam which
+                must be turned off manually before homing to ensure that the
+                beam isn't sent in an unsafe direction during the homing
+                procedure. Homing can be done using the Kinesis GUI in that
+                case, once the user has ensured that it is safe to do so.
             mock (bool, optional): (Default=False) If set to True then no real
                 actuator will be used. Instead a dummy that simply prints what
                 a real stage would do is used instead. This is helpful for
