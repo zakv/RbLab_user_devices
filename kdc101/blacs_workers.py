@@ -60,15 +60,15 @@ class _KDC101Interface(object):
         # TODO: Deal with paths in a smarter way.
         sys.path.append(r"C:\Program Files\Thorlabs\Kinesis")
         try:
-            # Import DeviceManagerCLI into .NET's Common Language Runtime (CLR) so
-            # we can then import it into python.
+            # Import DeviceManagerCLI into .NET's Common Language Runtime (CLR)
+            # so we can then import it into python.
             global DeviceManagerCLI
             clr.AddReference("Thorlabs.MotionControl.DeviceManagerCLI")
-            from Thorlabs.MotionControl.DeviceManagerCLI import DeviceManagerCLI
+            from Thorlabs.MotionControl.DeviceManagerCLI import DeviceManagerCLI  # pylint: disable=import-error
             # Import class that controls KDC101.
             global KCubeDCServo
             clr.AddReference("Thorlabs.MotionControl.KCube.DCServoCLI")
-            from Thorlabs.MotionControl.KCube.DCServoCLI import KCubeDCServo
+            from Thorlabs.MotionControl.KCube.DCServoCLI import KCubeDCServo  # pylint: disable=import-error
         except System.IO.FileNotFoundException:
             msg = """Could not find Thorlabs Kinesis drivers, ensure that the
                 Kinesis folder is included in sys.path."""
