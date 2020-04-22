@@ -1,8 +1,9 @@
-# KDC101
+# ActuatorsGroup
 
 ## Introduction
 
 This code implements some Thorlabs motion control products as static outputs.
+It is based on the Zaber stage software from the official labscript_devices repo.
 
 ## Installation
 

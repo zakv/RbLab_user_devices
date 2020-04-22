@@ -1,7 +1,5 @@
 #####################################################################
 #                                                                   #
-# /labscript_devices/ZaberStageController/labscript_devices.py      #
-#                                                                   #
 # Copyright 2019, Monash University and contributors                #
 #                                                                   #
 # This file is part of labscript_devices, in the labscript suite    #
@@ -13,98 +11,62 @@
 from labscript import StaticAnalogQuantity, IntermediateDevice, set_passed_properties
 import numpy as np
 
-from .utils import get_device_number
 
-# Base class for stages:
-class ZaberStage(StaticAnalogQuantity):
-    limits = (0, np.inf)
-    description = "Zaber Stage"
+class Actuator(StaticAnalogQuantity):
+
+    default_limits = (0, np.inf)
+    description = "Generic Actuator"
+
     @set_passed_properties(
         property_names={"connection_table_properties": ["limits"]}
     )
     def __init__(self, *args, limits=None, **kwargs):
-        """Static Analog output device for controlling the position of a Zaber stage.
-        Can be added as a child device of `ZaberStageController`. Subclasses for
-        specific models already have model-specific limits set for their values, but you
-        may further restrict these by setting the keyword argument limits=
+        """Static device for controlling the position of a mechanical actuator.
 
         Args:
-            *args:
-                Arguments to be passed to the  `__init__` method of the parent class
-                (StaticAnalogQuantity).
-
-            limits (tuple), default `None`
-                a two-tuple (min, max) for the minimum and maximum allowed positions, in
-                steps, that the device may be instructed to move to via a labscript
-                experiment or the BLACS front panel. If None, the limits set as a class
-                attribute will be used, which are set to the maximal positions allowed
-                by the device if using one of the model-specific subclasses defined in
-                this module, or is (0, inf) otherwise.
-
-            **kwargs:
-                Further keyword arguments to be passed to the `__init__` method of the
-                parent class (StaticAnalogQuantity).
-
+            *args (optional): These arguments will be passed to the `__init__()`
+                method of the parent class (StaticAnalogQuantity).
+            limits (tuple of two floats, optional): (Default=None) A tuple
+                containing two floats. The first of which specifies the minimum
+                value that the actuator should be allowed to go to, and the
+                second of which specifies the maximum value.
+            **kwargs (optional): Keyword arguments will be passed to the
+                `__init__()` method of the parent class (StaticAnalogQuantity).
         """
-
         if limits is None:
-            limits = self.limits
+            limits = self.default_limits
         StaticAnalogQuantity.__init__(self, *args, limits=limits, **kwargs)
 
 
 # Child classes for specific models of stages, which have knowledge of their valid
 # ranges:
-class ZaberStageTLSR150D(ZaberStage):
-    limits = (0, 76346)
-    description = 'Zaber Stage T-LSR150D'
+class KDC101(Actuator):
+    default_limits = (0, 76346)
+    description = "KDC101 Servo Motor Controller"
 
-class ZaberStageTLSR300D(ZaberStage):
-    limits = (0, 151937)
-    description = 'Zaber Stage T-LSR300D'
 
-class ZaberStageTLS28M(ZaberStage):
-    limits = (0, 282879)
-    description = 'Zaber Stage T-LS28-M'
-
-class ZaberStageTLSR300B(ZaberStage):
-    limits = (0, 607740)
-    description = 'Zaber Stage T-LSR150D'
-
-class ZaberStageController(IntermediateDevice):
-    allowed_children = [ZaberStage]
+class ActuatorsController(IntermediateDevice):
+    allowed_children = [Actuator]
 
     @set_passed_properties(
-        property_names={"connection_table_properties": ["com_port", "mock"]}
+        property_names={"connection_table_properties": ["mock"]}
     )
-    def __init__(self, name, com_port="COM1", mock=False, **kwargs):
-        """Device for controlling a number of Zaber stages connected to a serial port.
-        Add stages as child devices, either by using one of them model-specific classes
-        in this module, or the generic `ZaberStage` class.
+    def __init__(self, name, mock=False, **kwargs):
+        """Device for controlling a number of actuators.
+
+        Add stages as child devices, either by using one of the model-specific
+        classes in this module, or the generic `Actuator` class.
 
         Args:
-            name (str)
-                device name
-
-            com_port (str), default: `'COM1'`
-                Serial port for communication, i.e. `'COM1' etc on Windows or
-                `'/dev/USBtty0'` or similar on unix.
-
-            mock (bool, optional), default: False
-                For testing purpses, simulate a device instead of communicating with
-                actual hardware.
-
-            **kwargs: Further keyword arguments to be passed to the `__init__` method of
-                the parent class (IntermediateDevice).
-
+            name (str): The name to give to this group of actuators.
+            mock (bool, optional): (Default=False) If set to True then no real
+                actuator will be used. Instead a dummy that simply prints what
+                a real stage would do is used instead. This is helpful for
+                testing and development.
+            **kwargs: Further keyword arguents are passed to the `__init__()`
+                method of the parent class (IntermediateDevice).
         """
-
         IntermediateDevice.__init__(self, name, None, **kwargs)
-        self.BLACS_connection = com_port
-
-    def add_device(self, device):
-        # Error-check the connection string:
-        _ = get_device_number(device.connection)
-        IntermediateDevice.add_device(self, device)
 
     def generate_code(self, hdf5_file):
         IntermediateDevice.generate_code(self, hdf5_file)

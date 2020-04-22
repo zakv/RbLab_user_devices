@@ -1,7 +1,5 @@
 #####################################################################
 #                                                                   #
-# /labscript_devices/ZaberStageController/register_classes.py       #
-#                                                                   #
 # Copyright 2019, Monash University and contributors                #
 #                                                                   #
 # This file is part of labscript_devices, in the labscript suite    #
@@ -13,7 +11,7 @@
 from labscript_devices import register_classes
 
 register_classes(
-    'ZaberStageController',
-    BLACS_tab='labscript_devices.ZaberStageController.blacs_tabs.ZaberStageControllerTab',
+    'ActuatorController',
+    BLACS_tab='userlib.user_devices.RbLab.actuators_group.blacs_tabs.ActuatorsGroupTab',
     runviewer_parser=None,
 )
