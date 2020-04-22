@@ -11,6 +11,7 @@
 import sys
 import time
 
+import labscript_utils.h5_lock  # Must be imported be importing h5py
 import h5py
 
 import labscript_utils.h5_lock
@@ -32,7 +33,14 @@ class _MockKDC101Interface(MockZaberInterface):
     def __init__(self, serial_number):
         self.serial_number = serial_number
         from collections import defaultdict
-        self.positions = defaultdict(int)
+        self.position = 0
+
+    def move(self, position):
+        print(f"Mock move device to position {position}")
+        self.position = position
+
+    def get_position(self):
+        return self.position
 
 
 class _KDC101Interface(object):

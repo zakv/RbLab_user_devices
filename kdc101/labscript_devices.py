@@ -72,6 +72,7 @@ class KDC101(IntermediateDevice):
                 method of the parent class (IntermediateDevice).
         """
         IntermediateDevice.__init__(self, name, None, **kwargs)
+        self.BLACS_connection = serial_number
 
     def generate_code(self, hdf5_file):
         IntermediateDevice.generate_code(self, hdf5_file)

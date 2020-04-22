@@ -22,6 +22,7 @@ class KDC101Tab(DeviceTab):
         device = self.settings['connection_table'].find_by_name(
             self.device_name,
         )
+        self.serial_number = device.BLACS_connection
         self.mock = device.properties['mock']
 
         # Create the AO output objects
@@ -57,6 +58,7 @@ class KDC101Tab(DeviceTab):
             'main_worker',
             'userlib.user_devices.RbLab.kdc101.blacs_workers.KDC101Worker',
             {
+                'serial_number': self.serial_number,
                 'mock': self.mock,
                 'child_connections': self.child_connections,
             },
