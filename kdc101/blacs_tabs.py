@@ -16,8 +16,8 @@ class KDC101Tab(DeviceTab):
         # Capabilities
         self.base_units = 'mm'
         self.base_min = 0
-        self.base_step = 100
-        self.base_decimals = 0
+        self.base_step = 0.01
+        self.base_decimals = 5
 
         device = self.settings['connection_table'].find_by_name(
             self.device_name,
