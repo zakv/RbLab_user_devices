@@ -78,7 +78,8 @@ class KDC101(IntermediateDevice):
 
         # Get dictionary of actuators with their connections as they keys.
         actuators = {
-            actuator.connection: actuator for actuator in self.child_devices}
+            actuator.connection: actuator for actuator in self.child_devices,
+        }
 
         # Make a sorted list of the connections.
         connections = sorted(actuators.keys())
