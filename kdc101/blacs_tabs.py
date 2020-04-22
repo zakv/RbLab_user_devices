@@ -36,10 +36,9 @@ class KDC101Tab(DeviceTab):
                 'step': self.base_step,
                 'decimals': self.base_decimals,
             }
-        # TODO: Sort actuators
-        # ao_prop = {
-        #     c: ao_prop[c] for c in sorted(ao_prop, key=get_device_number)
-        # }
+        ao_prop = {
+            c: ao_prop[c] for c in sorted(ao_prop.keys())
+        }
         self.child_connections = list(ao_prop.keys())
         # Create the output objects
         self.create_analog_outputs(ao_prop)
@@ -50,7 +49,7 @@ class KDC101Tab(DeviceTab):
 
         # Set the capabilities of this device
         self.supports_remote_value_check(True)
-        self.supports_smart_programming(False)  # TODO: Implement?
+        self.supports_smart_programming(False)
 
     def initialise_workers(self):
         # Create and set the primary worker
