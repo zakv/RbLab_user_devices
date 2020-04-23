@@ -32,11 +32,13 @@ KCubeDCServo = None
 class _MockKDC101Interface(MockZaberInterface):
     def __init__(self, serial_number, kinesis_path):
         self.serial_number = serial_number
+        self.is_homed = False
         self.kinesis_path = kinesis_path
         from collections import defaultdict
         self.position = 0
 
     def home(self):
+        self.is_homed = True
         print("Mock device homed.")
 
     def move(self, position):
