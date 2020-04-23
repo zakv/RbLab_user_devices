@@ -136,6 +136,9 @@ class _KDC101Interface(object):
         print("Finshed Homing.")
 
     def move(self, position):
+        # System.Decimal doesn't handle numpy floats, so make sure it's a normal
+        # built-in python float.
+        position = float(position)
         self.controller.MoveTo(System.Decimal(position), self.default_timeout)
 
     def get_position(self):
