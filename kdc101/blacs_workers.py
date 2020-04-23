@@ -30,8 +30,9 @@ KCubeDCServo = None
 
 
 class _MockKDC101Interface(MockZaberInterface):
-    def __init__(self, serial_number):
+    def __init__(self, serial_number, kinesis_path):
         self.serial_number = serial_number
+        self.kinesis_path = kinesis_path
         from collections import defaultdict
         self.position = 0
 
@@ -52,9 +53,10 @@ class _KDC101Interface(object):
     default_timeout = int(60e3)  # Timeout in ms.
     polling_interval = 250  # Polling period in ms.
 
-    def __init__(self, serial_number):
-        # Store serial number.
+    def __init__(self, serial_number, kinesis_path):
+        # Store initialization parameters.
         self.serial_number = serial_number
+        self.kinesis_path = kinesis_path
 
         # Import required python libraries.
         global clr
@@ -67,9 +69,11 @@ class _KDC101Interface(object):
                 pythonnet is installed, which is possible via pip or conda."""
             raise ImportError(dedent(message))
 
-        # Use pythonnet to import necessary .NET libraries.
-        # TODO: Deal with paths in a smarter way.
-        sys.path.append(r"C:\Program Files\Thorlabs\Kinesis")
+        # Add path to kinesis .NET libraries if provided.
+        if kinesis_path and kinesis_path not in sys.path:
+            sys.path.append(kinesis_path)
+
+        # Use pythonnet to import necessary kinesis .NET libraries.
         try:
             # Import DeviceManagerCLI into .NET's Common Language Runtime (CLR)
             # so we can then import it into python.
@@ -146,9 +150,16 @@ class _KDC101Interface(object):
 class KDC101Worker(Worker):
     def init(self):
         if self.mock:
-            self.controller = _MockKDC101Interface(self.serial_number)
+            self.controller = _MockKDC101Interface(
+                self.serial_number,
+                self.kinesis_path,
+            )
         else:
-            self.controller = _KDC101Interface(self.serial_number)
+            self.controller = _KDC101Interface(
+                self.serial_number,
+                self.kinesis_path,
+            )
+
         if not self.controller.is_homed:
             if self.allow_homing:
                 self.controller.home()

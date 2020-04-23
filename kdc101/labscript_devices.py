@@ -8,7 +8,8 @@
 # the project for the full license.                                 #
 #                                                                   #
 #####################################################################
-from labscript import StaticAnalogQuantity, IntermediateDevice, set_passed_properties
+from labscript import StaticAnalogQuantity, IntermediateDevice, \
+    set_passed_properties
 import numpy as np
 
 
@@ -18,7 +19,7 @@ class BrushedDCServoMotor(StaticAnalogQuantity):
     description = "Generic Actuator"
 
     @set_passed_properties(
-        property_names={"connection_table_properties": ["limits"]}
+        property_names={'connection_table_properties': ['limits']}
     )
     def __init__(self, *args, limits=None, **kwargs):
         """Static device for controlling the position of a mechanical actuator.
@@ -49,12 +50,12 @@ class KDC101(IntermediateDevice):
 
     @set_passed_properties(
         property_names={
-            "connection_table_properties":
-                ["serial_number", "allow_homing", "mock"],
+            'connection_table_properties':
+                ['serial_number', 'allow_homing', 'mock', 'kinesis_path'],
         }
     )
     def __init__(self, name, serial_number,
-                 allow_homing, mock=False, **kwargs):
+                 allow_homing, mock=False, kinesis_path=None, **kwargs):
         """Device for controlling a KDC101.
 
         Add the brushled DC servo motor controlled by this KDC101 as a child
@@ -79,6 +80,11 @@ class KDC101(IntermediateDevice):
                 actuator will be used. Instead a dummy that simply prints what
                 a real stage would do is used instead. This is helpful for
                 testing and development.
+            kinesis_path (str): The path to the Thorlabs Kinesis folder, which
+                is often r'C:\\Program Files\\Thorlabs\\Kinesis'. The specified
+                direcotry will be added to python's sys.path so that the Kinesis
+                .NET libraries necessary for interfacing with the controller can
+                be loaded.
             **kwargs: Further keyword arguents are passed to the `__init__()`
                 method of the parent class (IntermediateDevice).
         """
