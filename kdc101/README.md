@@ -6,6 +6,11 @@ This directory contains the code necessary to use a Thorlabs KDC101 brushed DC s
 The KDC101 is capable of controlling various pieces of hardware.
 As of this writing, these pieces of hardware are typically actuated by the Z8 series of brushed DC servo motors, such as the Z812.
 
+Furthermore, "sequences" of moves do not currently have built-in support.
+In other words, this package allows setting the position of actuators before the start of a shot, but doesn't not support programming the devices to move mid-sequence when triggered.
+It may still be possible to do this by adjusting the controller's settings in the Kinesis GUI and then manually configuring a digital output channel to trigger it.
+However programmatically configuring those moves is not supported here, though the package could be generalized to do so.
+
 The code in this package is primarily based on the Zaber Stage controllers from the official labscript_utils distribution.
 Additionally, the approach to the low-level communication with the drivers was informed by the script in this <https://github.com/trautsned/thorlabs_kenesis_python> repo.
 
@@ -19,20 +24,19 @@ This is particularly true for the actuators.
 Though not tested, it's likely that the `BrushedDCServoMotor` class here will work for most hardware that is compatible with the KDC101.
 
 * Supported Controllers:
-  * KDC101 Brushed DC Servo Motor Controller
+  * KDC101 Brushed DC Servo Motor Controller.
 * Supported Actuators:
-  * Z812 Brushed DC Servo Motor Actuator
-  * Likely most of the other actuators that are compatible with the KDC101
-    * For these either create a new class in `labscript_devices.py` or use the generic `BrushedDCServoMotor` class
+  * Z812 Brushed DC Servo Motor Actuator.
+  * Likely most of the other actuators that are compatible with the KDC101.
+    * For these either create a new class in `labscript_devices.py` or use the generic `BrushedDCServoMotor` class.
 
 ## Setup
 
 Before using this module with Labscript, some additional setup is required.
 The steps are listed here and subsections below provide additional information about each step.
 
-* Install the software dependencies
-* Test the device with the Thorlabs Kinesis GUI
-* Make note
+* Install the software dependencies.
+* Test the device with the Thorlabs Kinesis GUI.
 
 ### Installing Software Dependencies
 
