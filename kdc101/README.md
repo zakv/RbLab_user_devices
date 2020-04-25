@@ -52,6 +52,9 @@ The controller and actuator can be easily tested by opening the Thorlabs Kinesis
 Then simply ensure that you can connect to the controller and move the actuator.
 You may also want to home the actuator while you have the GUI open.
 
+Importantly, make sure to disconnect from the controller in the Kinesis GUI before trying to connect to it with blacs, as only one application can connect to a controller at a time.
+This can be done by "unloading" the controller in the Kinesis GUI, or by closing the program entirely.
+
 ## Homing
 
 To ensure that the actuator positioning is repeatable, even if the device is power cycled, the code here makes sure that the device is homed when its blacs tab is started.
@@ -65,7 +68,9 @@ This control is provided because the actuator will move to near the end of its r
 That could be a problem if e.g. the actuator steers a high power beam which could be sent into an unsafe direction during homing.
 In that case it is best to instantiate the controller with `allow_homing=False`, then perform the homing using the Kinesis GUI after ensuring that it is safe to do so by e.g. turning off or blocking the high power light source.
 
-## Typical Connection Table Entry
+## Example Usage
+
+### Typical Connection Table Entry
 
 Below is an example of how include a controller and actuator in `connectiontable.py`.
 
@@ -103,9 +108,57 @@ Alternatively, forward slashes can be used or the backslashes can be escaped.
 * As is standard with the labscript connection table, the `pump_795_vertical_actuator =` part isn't necessary.
 It is sufficient (and necessary) to simply provide the `name` argument.
 
+### Usage in a Labscript
+
+Because only static outputs are supported, the usage is fairly straightforward.
+An example is provided below.
+
+```python
+# Move actuator to its desired position.
+pump_795_vertical_actuator.constant(actuator_position_pump_795_vertical)
+```
+
+* Note that the object used is the instance of the `Z812` actuator class, not the instance of the `KDC101` controller class.
+* Since the output is static, no value for `time` is passed to `.constant()`.
+* Here it is assumed that there is a global called `actuator_position_pump_795_vertical` defined.
+
 ## Generalizing to Other Hardware
 
+Initially this code was developed to be very general and compatible with a wide range of Thorlabs actuators.
+However it quickly became clear that I was not familiar enough with the similarities and differences between the wide array of their motion control projects, so I decided to take a bottom-up approach.
+Instead of writing the most general code, I wrote code specific to static outputs with the KDC101 and plan to generalize it as necessary.
+
+When generalizing the code, it's important to have good resources.
 A lot of helpful information, including example C# code for various pieces of hardware, is provided in the Kinesis help files.
 These can be accessed by opening the `Thorlabs.MotionControl.DotNet_API.chm` help file in the Kinesis directory.
-The process for using the .NET code in python is relatively straightforward and is explained in the pythonnet documentation.
+The process for using the .NET code in python is relatively straightforward and is explained in the pythonnet documentation, and a specific example of using it with the Kinesis .NET API is available in the github repo mentioned in the introduction.
 Additionally, the code in the KDC101 `blacs_workers.py` should be a useful reference.
+
+## FAQ and Common Issues
+
+* Blacs can't connect to the controller and throws an error.
+  * Try the following:
+    1. Read the full error traceback as it will likely tell you exactly what the issue is, which will speed up your debugging.
+    1. Ensure that the controller is powered on and plugged into the computer on which blacs is running.
+    1. Ensure that the serial number specified for the device in the connection table is correct.
+    1. Ensure that you've provided the correct path to the Kinesis folder in the `kinesis_path` argument in the connection table entry for the controller.
+    1. Make sure that no other application, including the Kinesis GUI, is connected to the device, as only one application can connect to it at a time.
+    1. As a debugging step, ensure that you can control the device from the Kinesis GUI.
+        * Make sure to disconnect from (aka "unload") the controller in the GUI before trying to connect to it again with blacs.
+    1. If this it the first time that you've added a KDC101 to your connection table, also ensure that the required software dependencies are installed (see "Installing Software Dependencies" above).
+    1. Sometimes the device doesn't connect on startup but will connect if you reinitialize its blacs tab by clicking on the blue circular arrow at the top right of its tab.
+    1. Occasionally restarting the computer, or at least the USB bus can resolve the issue, especially if the last program to interact with the controller didn't exit gracefully.
+    1. If the controller was created with `allow_homing=False` and the device isn't homed when the its blacs tab is initialized then it will throw a `RuntimeError`.
+    In this case the user must home the device using the Kinesis GUI.
+    Of course make sure it is safe to do so by blocking any relevant high power beams or doing anything else necessary before homing the device.
+* "Output values set on this device do not match the BLACS front panel" warning
+  * This warning can occur for different reasons, and its usually best to just take the value specified by the controller, as that provides the actual position of the actuator.
+  Also, simply setting the output to the desired value will instruct the controller to move to that position, which typically alleviates this warning.
+  Below are some reasons why this warning may appear.
+    * Often it's just because the actuator tried to move to the desired position and ended up close to, but no exactly at, the desired value.
+    In this case it's best to just take the value specified by the controller.
+    When this occurs, the errors are typically less than 1 um, so unless your system is extremely sensitive, the error typically doesn't matter.
+    Also, sometimes the servo will settle to the correct value a few seconds after this warning was issued.
+    * This warning may also occur if someone uses the controls on the KDC101 itself to move the actuator.
+    Again in this case one should use the values specified by the controller.
+    * This may also occur when starting up blacs if the device's position has changed since when blacs was closed.
