@@ -12,6 +12,7 @@ It may still be possible to do this by adjusting the controller's settings in th
 However programmatically configuring those moves is not supported here, though the package could be generalized to do so.
 
 The code in this package is primarily based on the Zaber Stage controllers from the official labscript_utils distribution.
+In fact, it was started by copy/pasting the files from the Zaber Stage directory, which is why the copyright info was retained.
 Additionally, the approach to the low-level communication with the drivers was informed by the script in this <https://github.com/trautsned/thorlabs_kenesis_python> repo.
 
 This package was developed and tested on Windows, but should work on other operating systems as well.
@@ -165,4 +166,4 @@ Additionally, the code in the KDC101 `blacs_workers.py` should be a useful refer
     Also, sometimes the servo will settle to the correct value a few seconds after this warning was issued.
     * This warning may also occur if someone uses the controls on the KDC101 itself to move the actuator.
     Again in this case one should use the values specified by the controller.
-    * This may also occur when starting up blacs if the device's position has changed since when blacs was closed.
+    * This may also occur when starting up blacs if the device's position has changed since when blacs was last closed.
