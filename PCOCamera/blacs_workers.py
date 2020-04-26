@@ -1,12 +1,11 @@
-# TODO: Copyright info
 """A module for interfacing PCO Cameras with Labscript.
 
 This module uses PCO's Software Development Kit (SDK) to interace with a PCO
 camera. Some initial setup, including installing dependencies is required before
 this module can be used. See the README.md in this folder for more details.
 
-Typical usage is to add something like the cod below to your connectiontable.py.
-You will likely want to keep the camera_attributes and
+Typical usage is to add something like the code below to your
+connectiontable.py. You will likely want to keep the camera_attributes and
 manual_mode_camera_attributes arguments commented out until you get a list of
 supported camera attributes from BLACS:
 ```
