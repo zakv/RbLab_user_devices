@@ -41,9 +41,11 @@ class ElliptecDevice(StaticAnalogQuantity):
 
 # Classes for specific models, which have knowledge of their valid ranges:
 class ELL14(ElliptecDevice):
-    base_units = 'deg'
-    default_limits = (0, 360)
     description = "ELL14 Rotation Mount"
+    base_units = 'deg'
+    # 360 degrees corresponds to 262144 encoder counts.
+    units_per_count = 360. / 262144.
+    default_limits = (0, 360)
 
 
 class ElliptecInterfaceBoard(IntermediateDevice):
