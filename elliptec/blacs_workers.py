@@ -23,166 +23,244 @@ from labscript_utils import dedent
 # Create module globals for importing device-specific libraries then we'll
 # import them later. That way labscript only needs those libraries installed if
 # one of these devices is actually used.
-clr = None
-System = None
-DeviceManagerCLI = None
-KCubeDCServo = None
+pyvisa = None
 
 
-class _MockKDC101Interface(MockZaberInterface):
-    def __init__(self, serial_number, kinesis_path):
-        self.serial_number = serial_number
-        self.is_homed = False
-        self.kinesis_path = kinesis_path
-        from collections import defaultdict
+class ElliptecError(Exception):
+    def __init__(self, error_code):
+        self.error_code = int(error_code)
+
+        error_info = {
+            1: "Communication time out.",
+            2: "Mechanical time out.",
+            3: "Command error or not supported.",
+            4: "Value out of range.",
+            5: "Module isolated.",
+            6: "Module out of isolation.",
+            7: "Initializing error.",
+            8: "Thermal error.",
+            9: "Busy.",
+            10: ("Sensor Error (May appear during self test. If code persists "
+                 "there is an error)."),
+            11: ("Motor Error (May appear during self test. If code persists "
+                 "there is an error)."),
+            12: ("Out of Range (e.g. stage has been instructed to move beyond "
+                 "its travel range)."),
+            13: "Over Current error.",
+        }
+
+        if error_code == 0:
+            message = "No error."
+        elif error_code in error_info:
+            message = f"Error {error_code}: {error_info[error_code]}"
+        else:
+            message = f"Error {error_code}: Undefined Error."
+
+        super().__init__(message)
+
+
+class _MockElliptecInterface(MockZaberInterface):
+    def home(self, address):
         self.position = 0
-
-    def home(self):
-        self.is_homed = True
-        print("Mock device homed.")
-
-    def move(self, position):
-        print(f"Mock move device to position {position}")
-        self.position = position
-
-    def get_position(self):
-        return self.position
+        print(f"Mock device {address} homed.")
 
 
-class _KDC101Interface(object):
+class _ElliptecInterface(object):
+    # Properties that should be kept by subclasses.
+    read_termination = '\r\n'
+    default_timeout = 30e3  # milliseconds.
 
-    # Configuraion constants.
-    default_timeout = int(60e3)  # Timeout in ms.
-    polling_interval = 250  # Polling period in ms.
+    # Properties that should be overwritten by subclasses.
+    units = ''  # e.g. 'mm' or 'degrees'
+    # Change in position in units per change in encoder count.
+    units_per_count = 1
 
-    def __init__(self, serial_number, kinesis_path):
-        # Store initialization parameters.
-        self.serial_number = serial_number
-        self.kinesis_path = kinesis_path
+    def __init__(self, com_port):
+        # Store com_port for future reference.
+        self.com_port = com_port
 
-        # Import required python libraries.
-        global clr
-        global System
-        try:
-            import clr
-            import System
-        except ImportError:
-            message = """Could not import clr and System. Please ensure that
-                pythonnet is installed, which is possible via pip or conda."""
-            raise ImportError(dedent(message))
+        # Perform pyvisa import.
+        global pyvisa
+        import pyvisa
 
-        # Add path to kinesis .NET libraries if provided.
-        if kinesis_path and kinesis_path not in sys.path:
-            sys.path.append(kinesis_path)
-
-        # Use pythonnet to import necessary kinesis .NET libraries.
-        try:
-            # Import DeviceManagerCLI into .NET's Common Language Runtime (CLR)
-            # so we can then import it into python.
-            global DeviceManagerCLI
-            clr.AddReference("Thorlabs.MotionControl.DeviceManagerCLI")
-            from Thorlabs.MotionControl.DeviceManagerCLI import DeviceManagerCLI  # pylint: disable=import-error
-            # Import class that controls KDC101.
-            global KCubeDCServo
-            clr.AddReference("Thorlabs.MotionControl.KCube.DCServoCLI")
-            from Thorlabs.MotionControl.KCube.DCServoCLI import KCubeDCServo  # pylint: disable=import-error
-        except System.IO.FileNotFoundException:
-            msg = """Could not find Thorlabs Kinesis drivers, ensure that the
-                Kinesis folder is included in sys.path."""
-            raise System.IO.FileNotFoundException(msg)
-
-        # Build device list so that drivers can find the controllers when we
-        # try to connect to them.
-        DeviceManagerCLI.BuildDeviceList()
-
-        # Create the KCube DCServo device.
-        self.controller = KCubeDCServo.CreateDevice(str(self.serial_number))
-
-        # Open a connection to the device.
-        self.controller.Connect(str(self.serial_number))
-
-        # Start the device polling.
-        # The polling loop requests regular status requests to the motor to
-        # ensure the program keeps track of the device.
-        self.controller.StartPolling(int(self.polling_interval))
-        time.sleep(0.5)
-
-        # Enable the channel otherwise any move is ignored.
-        self.controller.EnableDevice()
-        time.sleep(0.5)
-
-        # Call LoadMotorConfiguration on the device to initialize the
-        # DeviceUnitConverter object required for real world unit parameters.
-        # Loads configuration information into channel.
-        motor_configuration = self.controller.LoadMotorConfiguration(
-            str(self.serial_number)
-        )
-
-        # The API requires stage type to be specified.
-        # Name of motor or stage being controlled (check in Kinesis GUI).
-        # device_settings_name = 'Z812'
-        # motor_configuration.DeviceSettingsName = device_settings_name
-
-        # Get the device unit converter.
-        motor_configuration.UpdateCurrentConfiguration()
-
-    @property
-    def is_homed(self):
-        return self.controller.Status.IsHomed
-
-    def home(self):
-        print("Homing...")
-        self.controller.Home(self.default_timeout)
-        print("Finshed Homing.")
-
-    def move(self, position):
-        # System.Decimal doesn't handle numpy floats, so make sure it's a normal
-        # built-in python float.
-        position = float(position)
-        self.controller.MoveTo(System.Decimal(position), self.default_timeout)
-
-    def get_position(self):
-        return float(str(self.controller.Position))
+        # Connect to controller and configure communication settings.
+        resource_manager = pyvisa.ResourceManager()
+        self.visa_resource = resource_manager.open_resource(com_port)
+        self.visa_resource.read_termination = self.read_termination
+        self.visa_resource.timeout = self.default_timeout
 
     def close(self):
-        # Stop the driver's periodic checks on the actuator position.
-        self.controller.StopPolling()
+        self.visa_resource.close()
 
-        # Close the connection to the controller.
-        self.controller.Disconnect(True)
+    def open(self):
+        self.visa_resource.open()
+
+    def _address_to_str(self, address):
+        return '{:X}'.format(address)
+
+    def write(self, address, message, **kwargs):
+        addressed_message = self._address_to_str(address) + message
+        self.visa_resource.write(addressed_message, **kwargs)
+
+    def read(self, **kwargs):
+        # Get response.
+        response = self.visa_resource.read(**kwargs)
+
+        # Parse response.
+        address = response[0]
+        command = response[1:3]
+        data = response[3:]
+
+        return (address, command, data)
+
+    def query(self, address, message, delay=None):
+        self.write(address, message)
+
+        if delay:
+            time.sleep(delay)
+
+        return self.read()
+
+    def clear_receiving_state_machine(self):
+        # Explained in Section 3 "Overview of the Communications Protocol" in
+        # Elliptec Communication Manual.
+        self.visa_resource.write('\r', termination=None)
+
+    def get_info(self, address):
+        # 'in' for info
+        info_string = self.query(address, 'in')
+
+        # TODO: Interpret info string.
+
+        return info_string
+
+    def check_status(self, address):
+        # gs for get Status.
+        _, _, status_code = self.query(address, 'gs')
+
+        # Convert from string.
+        status_code = int(status_code)
+
+        # Raise exception if there was an error
+        if status_code != 0:
+            raise ElliptecError(status_code)
+
+    def _position_units_to_counts(self, position_in_units):
+        position_in_counts = int(
+            float(position_in_units) /
+            self.units_per_count)
+        return position_in_counts
+
+    def _position_counts_to_str(self, position_in_counts, n_bits=32):
+        # Deal with the cast that position_in_counts is negative.
+        if position_in_counts < 0:
+            # Figure out value where numbers wrap around. For 2's complement
+            # that value is 2^(n_bits -1).
+            wrap_around_value = 2**(n_bits - 1)
+            amount_exceeded = position_in_counts - (-wrap_around_value)
+            position_in_counts = wrap_around_value + amount_exceeded
+
+        # Convert to series of hex characters with captial letters and no
+        # leading "0x".
+        # '0' means pad with 0's, '>' means right-justify number, and 'X' for
+        # hex.
+        position_as_str = '{:0>8X}'.format(position_in_counts)
+
+        return position_as_str
+
+    def _position_units_to_str(self, position_in_units, **kwargs):
+        position_in_counts = self._position_units_to_counts(position_in_units)
+        position_as_str = self._position_counts_to_str(
+            position_in_counts, **kwargs)
+        return position_as_str
+
+    def _position_str_to_counts(self, position_as_str, n_bits=None):
+        # Set default value fo n_bits if necessary.
+        if n_bits is None:
+            # Each hex character gives 4 bits of information.
+            n_bits = 4 * len(position_as_str)
+
+        position_in_counts = int(position_as_str, 16)  # hex is base 16.
+
+        # Figure out value where numbers wrap around. For 2's complement that
+        # value is 2^(n_bits -1).
+        wrap_around_value = 2**(n_bits - 1)
+
+        # Deal with case that value exceeds wrap_around_value.
+        if position_in_counts >= wrap_around_value:
+            amount_exceeded = position_in_counts - wrap_around_value
+            position_in_counts = -wrap_around_value + amount_exceeded
+
+        return position_in_counts
+
+    def _position_counts_to_units(self, position_in_counts):
+        position_in_units = position_in_counts * self.units_per_count
+        return position_in_units
+
+    def _position_str_to_units(self, position_as_str, **kwargs):
+        position_in_counts = self._position_str_to_counts(
+            position_as_str, **kwargs)
+        position_in_units = self._position_counts_to_units(position_in_counts)
+        return position_in_units
+
+    def home(self, address, clockwise=True):
+        # 0 for clockwise, 1 for counterclockwise.
+        direction = str(int(not clockwise))
+
+        # 'ho' for home.
+        return_message = self.query(address, 'ho' + direction)
+
+        return return_message
+
+    def get_position(self, address):
+        # 'gp' for get position.
+        _, _, position_as_str = self.query(address, 'gp')
+
+        # Convert to real units.
+        position_in_units = self._position_str_to_units(position_as_str)
+
+        return position_in_units
+
+    def move(self, address, position):
+        # Convert position to string in necessary format.
+        position_as_str = self._position_units_to_str(position)
+
+        # 'ma' for move absolute.
+        return_message = self.query(address, 'ma' + position_as_str)
+
+        return return_message
+
+    def move_relative(self, address, position):
+        # Convert position to string in necessary format.
+        position_as_str = self._position_units_to_str(position)
+
+        # 'mr' for move relative.
+        return_message = self.query(address, 'mr' + position_as_str)
+
+        return return_message
 
 
-class KDC101Worker(Worker):
+class ElliptecWorker(Worker):
     def init(self):
         if self.mock:
-            self.controller = _MockKDC101Interface(
-                self.serial_number,
-                self.kinesis_path,
+            self.controller = _MockElliptecInterface(
+                self.com_port,
             )
         else:
-            self.controller = _KDC101Interface(
-                self.serial_number,
-                self.kinesis_path,
+            self.controller = _ElliptecInterface(
+                self.com_port,
             )
-
-        if not self.controller.is_homed:
-            if self.allow_homing:
-                self.controller.home()
-            else:
-                self.controller.close()
-                message = """Device isn't homed and is not allowed to home.
-                    Please home using Kinesis GUI then restart device."""
-                raise RuntimeError(dedent(message))
 
     def check_remote_values(self):
         remote_values = {}
         for connection in self.child_connections:
-            remote_values[connection] = self.controller.get_position()
+            remote_values[connection] = self.controller.get_position(
+                connection)
         return remote_values
 
     def program_manual(self, values):
-        for _, value in values.items():
-            self.controller.move(value)
+        for connection, value in values.items():
+            self.controller.move(connection, value)
         return self.check_remote_values()
 
     def transition_to_buffered(

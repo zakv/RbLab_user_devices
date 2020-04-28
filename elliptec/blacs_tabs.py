@@ -11,21 +11,19 @@
 from blacs.device_base_class import DeviceTab
 
 
-class KDC101Tab(DeviceTab):
+class ElliptecInterfaceBoardTab(DeviceTab):
     def initialise_GUI(self):
         # Capabilities
-        self.base_units = 'mm'
+        self.base_units = 'degrees'
         self.base_min = 0
         self.base_step = 0.01
-        self.base_decimals = 5
+        self.base_decimals = 4
 
         device = self.settings['connection_table'].find_by_name(
             self.device_name,
         )
-        self.serial_number = device.properties['serial_number']
-        self.allow_homing = device.properties['allow_homing']
+        self.com_port = device.properties['com_port']
         self.mock = device.properties['mock']
-        self.kinesis_path = device.properties['kinesis_path']
 
         # Create the AO output objects
         ao_prop = {}
@@ -58,12 +56,10 @@ class KDC101Tab(DeviceTab):
         # Create and set the primary worker
         self.create_worker(
             'main_worker',
-            'userlib.user_devices.RbLab.kdc101.blacs_workers.KDC101Worker',
+            'userlib.user_devices.RbLab.elliptec.blacs_workers.ElliptecWorker',
             {
-                'serial_number': self.serial_number,
-                'allow_homing': self.allow_homing,
+                'com_port': self.com_port,
                 'mock': self.mock,
-                'kinesis_path': self.kinesis_path,
                 'child_connections': self.child_connections,
             },
         )

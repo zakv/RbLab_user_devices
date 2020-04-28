@@ -13,16 +13,16 @@ from labscript import StaticAnalogQuantity, IntermediateDevice, \
 import numpy as np
 
 
-class BrushedDCServoMotor(StaticAnalogQuantity):
+class ElliptecDevice(StaticAnalogQuantity):
 
-    default_limits = (0, np.inf)
-    description = "Generic Actuator"
+    default_limits = (-np.inf, np.inf)
+    description = "Generic Elliptec Device"
 
     @set_passed_properties(
         property_names={'connection_table_properties': ['limits']}
     )
     def __init__(self, *args, limits=None, **kwargs):
-        """Static device for controlling the position of a mechanical actuator.
+        """Static device for controlling the position of an Elliptec device.
 
         Args:
             *args (optional): These arguments will be passed to the `__init__()`
@@ -40,56 +40,48 @@ class BrushedDCServoMotor(StaticAnalogQuantity):
 
 
 # Classes for specific models, which have knowledge of their valid ranges:
-class Z812(BrushedDCServoMotor):
-    default_limits = (0, 12)
-    description = "Z812 Brushed DC Servo Motor"
+class ELL14(ElliptecDevice):
+    default_limits = (0, 360)
+    description = "ELL14 Rotation Mount"
 
 
-class KDC101(IntermediateDevice):
-    allowed_children = [BrushedDCServoMotor]
+class ElliptecInterfaceBoard(IntermediateDevice):
+    allowed_children = [ElliptecDevice]
 
     @set_passed_properties(
         property_names={
             'connection_table_properties':
-                ['serial_number', 'allow_homing', 'mock', 'kinesis_path'],
+                ['com_port', 'mock'],
         }
     )
-    def __init__(self, name, serial_number,
-                 allow_homing, mock=False, kinesis_path=None, **kwargs):
-        """Device for controlling a KDC101.
+    def __init__(self, name, com_port, mock=False, **kwargs):
+        """Device for controlling an Elliptec Interface Board.
 
-        Add the brushled DC servo motor controlled by this KDC101 as a child
-        device. You can use either a model-specific class or the generic
-       `BrushedDCServoMotor` class.
+        This class is intended to represent the interface board used to
+        communicate with the Thorlabs Elliptec line of products. These boards
+        accept a USB cable from a computer and a ribbon cable. The ribbon cable
+        may then go directly to an Elliptec device, or to one or more ELLB bus
+        distributors, which then in turn connect to one or more Elliptec
+        devices.
+
+        Add the Elliptec devices controlled by this interface board as child
+        devices. You can use either a model-specific class or the generic
+       `ElliptecDevice` class.
 
         Args:
-            name (str): The name to give to this group of actuators.
-            serial_number (int): The serial number of the KDC101, which is
-                labeled on the device itself. Alternatively it can be determined
-                by looking at the device in the Kinesis GUI software.
-            allow_homing (bool): If the device needs to be homed (i.e. it has
-                not been homed since it was last powered on) then it will be
-                homed if allow_homing is True. If allow_homing is False and the
-                device is not already homed, a RuntimeError will be raised. This
-                is useful e.g. if the actuator controls a high power beam which
-                must be turned off manually before homing to ensure that the
-                beam isn't sent in an unsafe direction during the homing
-                procedure. Homing can be done using the Kinesis GUI in that
-                case, once the user has ensured that it is safe to do so.
+            name (str): The name to give to this interface board.
+            com_port (str): The serial connection of the interface board. This
+                looks something like `'COM1'` on windows and `'/dev/USBtty0'` or
+                similar on linux.
             mock (bool, optional): (Default=False) If set to True then no real
-                actuator will be used. Instead a dummy that simply prints what
-                a real stage would do is used instead. This is helpful for
+                interface board will be used. Instead a dummy that simply prints
+                what a real device would do is used instead. This is helpful for
                 testing and development.
-            kinesis_path (str): The path to the Thorlabs Kinesis folder, which
-                is often r'C:\\Program Files\\Thorlabs\\Kinesis'. The specified
-                direcotry will be added to python's sys.path so that the Kinesis
-                .NET libraries necessary for interfacing with the controller can
-                be loaded.
             **kwargs: Further keyword arguents are passed to the `__init__()`
                 method of the parent class (IntermediateDevice).
         """
         IntermediateDevice.__init__(self, name, None, **kwargs)
-        self.BLACS_connection = serial_number
+        self.BLACS_connection = com_port
 
     def generate_code(self, hdf5_file):
         IntermediateDevice.generate_code(self, hdf5_file)
