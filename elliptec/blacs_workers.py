@@ -96,7 +96,7 @@ class _ElliptecInterface(object):
         self.visa_resource.open()
 
     def _address_to_str(self, address):
-        return '{:X}'.format(address)
+        return '{:X}'.format(int(address))
 
     def write(self, address, message, **kwargs):
         addressed_message = self._address_to_str(address) + message
