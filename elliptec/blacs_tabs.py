@@ -14,10 +14,10 @@ from blacs.device_base_class import DeviceTab
 class ElliptecInterfaceBoardTab(DeviceTab):
     def initialise_GUI(self):
         # Capabilities
-        self.base_units = ''
+        self.base_units = 'counts'
         self.base_min = 0
-        self.base_step = 0.01
-        self.base_decimals = 4
+        self.base_step = 100
+        self.base_decimals = 0
 
         interface_board = self.settings['connection_table'].find_by_name(
             self.device_name,
@@ -31,7 +31,7 @@ class ElliptecInterfaceBoardTab(DeviceTab):
             connection = elliptec_device.parent_port
             base_min, base_max = elliptec_device.properties['limits']
             ao_prop[connection] = {
-                'base_unit': elliptec_device.base_units,
+                'base_unit': self.base_units,
                 'min': base_min,
                 'max': base_max,
                 'step': self.base_step,

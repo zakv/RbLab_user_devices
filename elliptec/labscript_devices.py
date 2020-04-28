@@ -14,9 +14,8 @@ import numpy as np
 
 
 class ElliptecDevice(StaticAnalogQuantity):
-    base_units = ''
-    default_limits = (-np.inf, np.inf)
     description = "Generic Elliptec Device"
+    default_limits = (-np.inf, np.inf)
 
     @set_passed_properties(
         property_names={'connection_table_properties': ['limits']}
@@ -30,7 +29,8 @@ class ElliptecDevice(StaticAnalogQuantity):
             limits (tuple of two floats, optional): (Default=None) A tuple
                 containing two floats. The first of which specifies the minimum
                 value that the actuator should be allowed to go to, and the
-                second of which specifies the maximum value.
+                second of which specifies the maximum value. This should be
+                specified in base units, i.e. encoder counts, not real units.
             **kwargs (optional): Keyword arguments will be passed to the
                 `__init__()` method of the parent class (StaticAnalogQuantity).
         """
@@ -42,10 +42,10 @@ class ElliptecDevice(StaticAnalogQuantity):
 # Classes for specific models, which have knowledge of their valid ranges:
 class ELL14(ElliptecDevice):
     description = "ELL14 Rotation Mount"
-    base_units = 'deg'
-    # 360 degrees corresponds to 262144 encoder counts.
-    units_per_count = 360. / 262144.
-    default_limits = (0, 360)
+    base_units = 'counts'
+    # 360 degrees corresponds to 143360 encoder counts.
+    units_per_count = 360. / 143360.
+    default_limits = (-180, 180)
 
 
 class ElliptecInterfaceBoard(IntermediateDevice):
