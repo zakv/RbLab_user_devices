@@ -26,10 +26,8 @@ class ELL14_Unit_Converter(UnitConversion):
         UnitConversion.__init__(self, self.parameters)
 
     def deg_to_base(self, position_deg):
-        # Convert to range -180 to +180 degrees (including -180 but not +180).
+        # Convert to range 0 to +360 degrees (including 0 but not +360).
         position_deg = position_deg % 360.
-        if position_deg >= 180.:
-            position_deg = position_deg - 180.
 
         # Now convert to encoder counts.
         slope = self.parameters['slope']
