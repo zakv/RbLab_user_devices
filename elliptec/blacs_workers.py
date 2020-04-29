@@ -82,16 +82,54 @@ class _ElliptecInterface(object):
         import pyvisa
 
         # Connect to controller and configure communication settings.
-        resource_manager = pyvisa.ResourceManager()
-        self.visa_resource = resource_manager.open_resource(com_port)
-        self.visa_resource.read_termination = self.read_termination
-        self.visa_resource.timeout = self.default_timeout
+        self.open_resource()
 
-    def close(self):
-        self.visa_resource.close()
+    def open_resource(self):
+        """Open a connection to the device.
+
+        When blacs opens and tries to connect to many devices at once, the
+        drivers sometimes fails to find the device. To work around that, this
+        method tries a few times before giving up.
+
+        Raises:
+            pyvisa.errors.VisaIOError: Raised if the connection to the device
+                fails multiple times. If this occurs, it's likely that the
+                device is not connected.
+        """
+        need_to_connect = True
+        n_connection_attempt = 1
+        max_attempts = 10
+        while need_to_connect and (n_connection_attempt <= max_attempts):
+            try:
+                # Print info for debugging.
+                print(f"Connection attempt {n_connection_attempt}...")
+
+                # Try to connect
+                resource_manager = pyvisa.ResourceManager()
+                self.visa_resource = resource_manager.open_resource(
+                    self.com_port,
+                )
+                self.visa_resource.read_termination = self.read_termination
+                self.visa_resource.timeout = self.default_timeout
+
+                # If an error wasn't thrown, the connection was a success.
+                need_to_connect = False
+                print("Connected.")
+            except pyvisa.errors.VisaIOError as err:
+                n_connection_attempt += 1
+                connection_error = err  # Save for re-raising later.
+                time.sleep(1)
+
+        # If we still haven't connected after multiple tries, give up and raise
+        # the error.
+        if need_to_connect:
+            raise connection_error
 
     def open(self):
         self.visa_resource.open()
+
+    def close(self):
+        self.visa_resource.close()
 
     def _address_to_str(self, address):
         return '{:X}'.format(int(address))
