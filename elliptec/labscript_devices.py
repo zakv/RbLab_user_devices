@@ -43,9 +43,11 @@ class ElliptecDevice(StaticAnalogQuantity):
 class ELL14(ElliptecDevice):
     description = "ELL14 Rotation Mount"
     base_units = 'counts'
-    # 360 degrees corresponds to 143360 encoder counts.
-    units_per_count = 360. / 143360.
-    default_limits = (-180, 180)
+    # 143360 encoder counts corresponds to 360 degrees. The requested position's
+    # encoder count can be specified as a positive or negative number, but its
+    # absolute value must be strictly less than 143360, otherwise the ELL14 just
+    # returns an error and doesn't move.
+    default_limits = (-143359, 143359)
 
 
 class ElliptecInterfaceBoard(IntermediateDevice):
