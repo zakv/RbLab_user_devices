@@ -81,7 +81,7 @@ class _KDC101Interface(object):
             # so we can then import it into python.
             global DeviceManagerCLI
             clr.AddReference("Thorlabs.MotionControl.DeviceManagerCLI")
-            from Thorlabs.MotionControl.DeviceManagerCLI import DeviceManagerCLI  # pylint: disable=import-error
+            from Thorlabs.MotionControl import DeviceManagerCLI  # pylint: disable=import-error
             # Import class that controls KDC101.
             global KCubeDCServo
             clr.AddReference("Thorlabs.MotionControl.KCube.DCServoCLI")
@@ -91,15 +91,39 @@ class _KDC101Interface(object):
                 Kinesis folder is included in sys.path."""
             raise System.IO.FileNotFoundException(msg)
 
-        # Build device list so that drivers can find the controllers when we
-        # try to connect to them.
-        DeviceManagerCLI.BuildDeviceList()
+        # Open a connection to the device. When blacs opens and tries to connect
+        # to many devices at once, this sometimes fails to find the device. To
+        # work around that, we'll try a few times before giving up.
+        need_to_connect = True
+        n_connection_attempt = 1
+        max_attempts = 5
+        while need_to_connect and (n_connection_attempt <= max_attempts):
+            try:
+                # Print info for debugging.
+                print(f"Connection attempt {n_connection_attempt}...")
 
-        # Create the KCube DCServo device.
-        self.controller = KCubeDCServo.CreateDevice(str(self.serial_number))
+                # Build device list so that drivers can find the controller.
+                DeviceManagerCLI.DeviceManagerCLI.BuildDeviceList()
 
-        # Open a connection to the device.
-        self.controller.Connect(str(self.serial_number))
+                # Create the KCube DCServo device.
+                self.controller = KCubeDCServo.CreateDevice(
+                    str(self.serial_number)
+                )
+
+                # Try to open the connection.
+                self.controller.Connect(str(self.serial_number))
+
+                # If an error wasn't thrown, the connection was a success.
+                need_to_connect = False
+                print("Connected.")
+            except DeviceManagerCLI.DeviceNotReadyException as err:
+                n_connection_attempt += 1
+                connection_error = err  # Save for re-raising later.
+
+        # If we haven't connected after multiple tries, give up and raise the
+        # error.
+        if need_to_connect:
+            raise connection_error
 
         # Start the device polling.
         # The polling loop requests regular status requests to the motor to
