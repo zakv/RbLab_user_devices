@@ -293,9 +293,16 @@ class ElliptecWorker(Worker):
         # Compare actual serial number to serial number in connection table for
         # each device.
         for connection, serial_number in self.connection_serial_numbers.items():
+            # Get the actual serial number of the device at this connection.
             actual_serial_number = self.controller.get_serial_number(
-                connection
+                connection,
             )
+
+            # Make sure serial_number is a string since actual_serial_number
+            # is.
+            serial_number = str(serial_number)
+
+            # Ensure that the two are the same.
             if serial_number != actual_serial_number:
                 message = (f"Device with connection {connection} has serial "
                            f"number '{actual_serial_number}' but is specified "
