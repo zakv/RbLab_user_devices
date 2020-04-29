@@ -140,8 +140,8 @@ class _KDC101Interface(object):
 
         Raises:
             DeviceNotReadyException: Raised if the connection to the device
-                fails multiple times. If this occurs, it's likel that the device
-                is not connected, or that the serial number provided is
+                fails multiple times. If this occurs, it's likely that the
+                device is not connected, or that the serial number provided is
                 incorrect.
         """
         need_to_connect = True
