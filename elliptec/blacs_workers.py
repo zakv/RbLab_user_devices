@@ -94,12 +94,22 @@ class _ElliptecInterface(object):
         return '{:X}'.format(int(address))
 
     def write(self, address, message, **kwargs):
+        # Construct message.
         addressed_message = self._address_to_str(address) + message
+
+        # Print message to console for debugging purposes.
+        print(addressed_message)
+
         self.visa_resource.write(addressed_message, **kwargs)
 
     def read(self, **kwargs):
         # Get response.
         response = self.visa_resource.read(**kwargs)
+
+        # Print response to console for debugging purposes.
+        print(response)
+        # Print an empty line to visually separate next message.
+        print()
 
         # Parse response.
         address = response[0]
