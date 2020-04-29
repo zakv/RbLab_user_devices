@@ -70,11 +70,6 @@ class _ElliptecInterface(object):
     read_termination = '\r\n'
     default_timeout = 30e3  # milliseconds.
 
-    # Properties that should be overwritten by subclasses.
-    units = ''  # e.g. 'mm' or 'degrees'
-    # Change in position in units per change in encoder count.
-    units_per_count = 1
-
     def __init__(self, com_port):
         # Store com_port for future reference.
         self.com_port = com_port
@@ -145,12 +140,6 @@ class _ElliptecInterface(object):
         if status_code != 0:
             raise ElliptecError(status_code)
 
-    def _position_units_to_counts(self, position_in_units):
-        position_in_counts = int(
-            float(position_in_units) /
-            self.units_per_count)
-        return position_in_counts
-
     def _position_counts_to_str(self, position_in_counts, n_bits=32):
         # Deal with the cast that position_in_counts is negative.
         if position_in_counts < 0:
@@ -166,12 +155,6 @@ class _ElliptecInterface(object):
         # hex.
         position_as_str = '{:0>8X}'.format(position_in_counts)
 
-        return position_as_str
-
-    def _position_units_to_str(self, position_in_units, **kwargs):
-        position_in_counts = self._position_units_to_counts(position_in_units)
-        position_as_str = self._position_counts_to_str(
-            position_in_counts, **kwargs)
         return position_as_str
 
     def _position_str_to_counts(self, position_as_str, n_bits=None):
@@ -193,16 +176,6 @@ class _ElliptecInterface(object):
 
         return position_in_counts
 
-    def _position_counts_to_units(self, position_in_counts):
-        position_in_units = position_in_counts * self.units_per_count
-        return position_in_units
-
-    def _position_str_to_units(self, position_as_str, **kwargs):
-        position_in_counts = self._position_str_to_counts(
-            position_as_str, **kwargs)
-        position_in_units = self._position_counts_to_units(position_in_counts)
-        return position_in_units
-
     def home(self, address, clockwise=True):
         # 0 for clockwise, 1 for counterclockwise.
         direction = str(int(not clockwise))
@@ -216,23 +189,23 @@ class _ElliptecInterface(object):
         # 'gp' for get position.
         _, _, position_as_str = self.query(address, 'gp')
 
-        # Convert to real units.
-        position_in_units = self._position_str_to_units(position_as_str)
+        # Convert to python integer.
+        position_in_counts = self._position_str_to_counts(position_as_str)
 
-        return position_in_units
+        return position_in_counts
 
-    def move(self, address, position):
+    def move(self, address, position_in_counts):
         # Convert position to string in necessary format.
-        position_as_str = self._position_units_to_str(position)
+        position_as_str = self._position_counts_to_str(position_in_counts)
 
         # 'ma' for move absolute.
         return_message = self.query(address, 'ma' + position_as_str)
 
         return return_message
 
-    def move_relative(self, address, position):
+    def move_relative(self, address, position_in_counts):
         # Convert position to string in necessary format.
-        position_as_str = self._position_units_to_str(position)
+        position_as_str = self._position_counts_to_str(position_in_counts)
 
         # 'mr' for move relative.
         return_message = self.query(address, 'mr' + position_as_str)
