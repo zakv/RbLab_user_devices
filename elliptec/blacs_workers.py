@@ -64,6 +64,9 @@ class _MockElliptecInterface(MockZaberInterface):
         self.position = 0
         print(f"Mock device {address} homed.")
 
+    def get_serial_number(self, address):
+        return '12345678'
+
 
 class _ElliptecInterface(object):
     # Properties that should be kept by subclasses.
@@ -138,6 +141,13 @@ class _ElliptecInterface(object):
         # TODO: Interpret info string.
 
         return info_string
+
+    def get_serial_number(self, address):
+        # Put parse info string back together so that indices here match up with
+        # indices in Elliptec documentation.
+        info_string = ''.join(self.get_info(address))
+        serial_number = info_string[5:13]
+        return serial_number
 
     def check_status(self, address):
         # gs for get Status.
@@ -236,6 +246,24 @@ class ElliptecWorker(Worker):
             self.controller = _ElliptecInterface(
                 self.com_port,
             )
+
+        # Check that serial numbers of devices match values in connection
+        # table.
+        self.check_serial_numbers()
+
+    def check_serial_numbers(self):
+        # Compare actual serial number to serial number in connection table for
+        # each device.
+        for connection, serial_number in self.connection_serial_numbers.items():
+            actual_serial_number = self.controller.get_serial_number(
+                connection
+            )
+            if serial_number != actual_serial_number:
+                message = (f"Device with connection {connection} has serial "
+                           f"number '{actual_serial_number}' but is specified "
+                           f"to have serial number '{serial_number}' in the "
+                           "connection table.")
+                raise ValueError(message)
 
     def check_remote_values(self):
         remote_values = {}

@@ -27,8 +27,17 @@ class ElliptecInterfaceBoardTab(DeviceTab):
 
         # Create the AO output objects
         ao_prop = {}
+        self.connection_serial_numbers = {}
         for elliptec_device in interface_board.child_list.values():
+            # Get info about device.
             connection = elliptec_device.parent_port
+            serial_number = elliptec_device.properties['serial_number']
+
+            # Keep track of connection and serial number so they can be checked
+            # in blacs_workers.py.
+            self.connection_serial_numbers[connection] = serial_number
+
+            # Info for AO output objects.
             base_min, base_max = elliptec_device.properties['limits']
             ao_prop[connection] = {
                 'base_unit': self.base_units,
@@ -61,6 +70,7 @@ class ElliptecInterfaceBoardTab(DeviceTab):
                 'com_port': self.com_port,
                 'mock': self.mock,
                 'child_connections': self.child_connections,
+                'connection_serial_numbers': self.connection_serial_numbers,
             },
         )
         self.primary_worker = 'main_worker'

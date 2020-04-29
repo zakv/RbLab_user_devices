@@ -18,14 +18,20 @@ class ElliptecDevice(StaticAnalogQuantity):
     default_limits = (-np.inf, np.inf)
 
     @set_passed_properties(
-        property_names={'connection_table_properties': ['limits']}
+        property_names={
+            'connection_table_properties': ['serial_number', 'limits']
+        }
     )
-    def __init__(self, *args, limits=None, **kwargs):
+    def __init__(self, *args, serial_number, limits=None, **kwargs):
         """Static device for controlling the position of an Elliptec device.
 
         Args:
             *args (optional): These arguments will be passed to the `__init__()`
                 method of the parent class (StaticAnalogQuantity).
+            serial_number (str): The serial number of the Elliptec device. This
+                can be determined by looking at the "Details" tab after
+                connecting to the device with the ELLO GUI provided by Thorlabs.
+                Note that this should be provided as a string.
             limits (tuple of two floats, optional): (Default=None) A tuple
                 containing two floats. The first of which specifies the minimum
                 value that the actuator should be allowed to go to, and the
