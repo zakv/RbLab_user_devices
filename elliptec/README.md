@@ -1,35 +1,32 @@
-# KDC101
+# Thorlabs Elliptec Labscript Integration
 
 ## Introduction
 
-This directory contains the code necessary to use a Thorlabs KDC101 brushed DC servo motor controller.
-The KDC101 is capable of controlling various pieces of hardware.
-As of this writing, these pieces of hardware are typically actuated by the Z8 series of brushed DC servo motors, such as the Z812.
-
-Furthermore, "sequences" of moves do not currently have built-in support.
-In other words, this package allows setting the position of actuators before the start of a shot, but doesn't not support programming the devices to move mid-sequence when triggered.
-It may still be possible to do this by adjusting the controller's settings in the Kinesis GUI and then manually configuring a digital output channel to trigger it.
-However programmatically configuring those moves is not supported here, though the package could be generalized to do so.
+This directory contains the code necessary to use Thorlabs Elliptec devices.
 
 The code in this package is primarily based on the Zaber Stage controllers from the official labscript_utils distribution.
 In fact, it was started by copy/pasting the files from the Zaber Stage directory, which is why the copyright info was retained.
-Additionally, the approach to the low-level communication with the drivers was informed by the script in this <https://github.com/trautsned/thorlabs_kenesis_python> repo.
+Additionally, the approach to the low-level communication with the drivers was informed by the script in this <https://github.com/cdbaird/TL-rotation-control> repo.
 
-This package was developed and tested on Windows, but should work on other operating systems as well.
+The goal of this package is not to replace the ELLO GUI program that is available from Thorlabs as part of the Elliptec Software download.
+It is only intended to control the positions of Elliptec devices from labscript.
+There are additional things that the devices can do, such as find their motor
+resonance frequencies and clean off their track.
+Those features can be controlled using ELLO and there's really no need to control them from blacs directly.
+
+This package was developed and tested on Windows, but it may work on other operating systems as well.
+As of this writing, the Elliptec Software package from Thorlabs is only available for Windows.
+However, the device communication in this module is done entirely via low-level serial port commands, so it should work on any operating system that is compatible with pyvisa.
 
 ## Supported Hardware
 
-As of this writing, this package only supports the KDC101 and some of the devices that it can control.
-The code should be relatively easy to generalize and may even work for other hardware, potentially without modification.
-This is particularly true for the actuators.
-Though not tested, it's likely that the `BrushedDCServoMotor` class here will work for most hardware that is compatible with the KDC101.
+As of this writing, this package only supports the ELL14.
+However, it was written in such a way that it should be straightforward to generalize it to work with other devices as well.
+See "Generalizing to Other Hardware" below for more information on that.
 
-* Supported Controllers:
-  * KDC101 Brushed DC Servo Motor Controller.
-* Supported Actuators:
-  * Z812 Brushed DC Servo Motor Actuator.
-  * Likely most of the other actuators that are compatible with the KDC101.
-    * For these either create a new class in `labscript_devices.py` or use the generic `BrushedDCServoMotor` class.
+Supported Hardware List:
+
+* ELL14 Rotation Mount
 
 ## Setup
 
@@ -37,41 +34,43 @@ Before using this module with Labscript, some additional setup is required.
 The steps are listed here and subsections below provide additional information about each step.
 
 * Install the software dependencies.
-* Test the device with the Thorlabs Kinesis GUI.
+* Test the device with the Thorlabs ELLO GUI.
 
 ### Installing Software Dependencies
 
 The following software needs to be installed in order to use this module:
 
 * Python 3 (Python 2 isn't supported)
-* Thorlabs Kinesis, available for free from their website.
-  * Take a note of the install directory when installing, as you will need to know it later on.
-* pythonnet, a python package for interfacing between python and the .NET framework.
-  * To install via pip: `pip install pythonnet`
+* Thorlabs Elliptec Software, available for free from their website.
+  * This may not be completely necessary (and is only available on Windows as of this writing) but it is helpful for debugging and allows for additional controls for features not used by this module.
+* pyvisa
+  * To install via pip: `pip install pyvisa`
+  * If you do not have a VISA implementation installed, you may need to install one as well.
+    See the pyvisa installation instructions for more information.
+* Copy/paste the `elliptec_unit_conversions.py` file included in this module to the  `labscript_suite\labscript_utils\unitconversions\` folder.
+  * This is necessary in order to be able to specify positions in real units, e.g. degrees, rather than in units of position encoder counts.
 
-### Testing Device and Connection
+### Testing the Device with the Thorlabs ELLO GUI
 
-Before adding a new controller and actuator to `connectiontable.py`, it's best to ensure that they are connected and working as desired.
+Before adding a new Eilliptec device to `connectiontable.py`, it's best to ensure that they are connected and working as desired.
 This eliminates some possible issues when debugging if you run into trouble.
-The controller and actuator can be easily tested by opening the Thorlabs Kinesis GUI.
-Then simply ensure that you can connect to the controller and move the actuator.
-You may also want to home the actuator while you have the GUI open.
+The device can be easily tested by opening the ELLO program that is included in the Thorlabs Elliptec Software installation.
 
-Importantly, make sure to disconnect from the controller in the Kinesis GUI before trying to connect to it with blacs, as only one application can connect to a controller at a time.
-This can be done by "unloading" the controller in the Kinesis GUI, or by closing the program entirely.
+In ELLO, select the COM port for your Elliptec interface board (the PCB with a USB connector on one side and a ribbon cable connector on the other), and set the "Search Range" as desired, and click connect.
+If you're not sure which COM port corresponds to your interface board, one way to check is to unplug/plug the device and see which COM port appears/disappears from the list.
+The search range will look for devices connected to the interface board, which will have an address specified by a 1-digit hex number, `0` to `F`.
+There may be multiple devices connected to the interface board if a ELLB bus distributor is used.
+Take note of the COM port and the address as these will be needed later.
 
-## Homing
+This may seem a little confusing, but the COM port and address are different.
+Basically, the COM port specifies where the interface board is connected to your computer (via USB), and the address specifies which device connected to a given interface board (via ribbon cable) you're trying to control.
 
-To ensure that the actuator positioning is repeatable, even if the device is power cycled, the code here makes sure that the device is homed when its blacs tab is started.
-Once the device is homed, either by the code here or using the Kinesis GUI, it will stay homed until it is power cycled.
+After connecting to the device, ensure that you can move it using the controls provided.
+If so, you're in good shape.
+While you have ELLO open and connected to your device, expand the "Details" section and take note of the serial number as you'll need to know that as well.
 
-If the device is not homed when its blacs tab is started, one of two things will occur depending on whether the controller was instantiated with `allow_homing=True` or `allow_homing=False`.
-If `allow_homing` is set to `True`, then the device will automatically be homed.
-On the other hand, if `allow_homing` is set to `False`, then the code will raise a `RuntimeError` and the device will not initialized.
-
-This control is provided because the actuator will move to near the end of its range when homing.
-That could be a problem if e.g. the actuator steers a high power beam which could be sent into an unsafe direction during homing.
-In that case it is best to instantiate the controller with `allow_homing=False`, then perform the homing using the Kinesis GUI after ensuring that it is safe to do so by e.g. turning off or blocking the high power light source.
+Once you are done testing out the device, make sure to click the disconnect button.
+Only one application at a time (at least one Windows) can connect to the device, so you'll have to disconnect from in in ELLO before connecting to it with blacs.
 
 ## Example Usage
 
@@ -81,22 +80,24 @@ Below is an example of how include a controller and actuator in `connectiontable
 
 ```python
 # Import the devices.
-from userlib.user_devices.RbLab.kdc101.labscript_devices import KDC101, Z812
+from userlib.user_devices.RbLab.elliptec.labscript_devices import ElliptecInterfaceBoard, ELL14
+# Import the unit converter.
+from userlib.user_devices.RbLab.elliptec.elliptec_unit_conversions import ELL14_Unit_Converter
 
-# Instantiate a controller.
-pump_795_vertical_actuator_controller = KDC101(
-    name='pump_795_vertical_actuator_controller',
-    serial_number=27255743,
-    allow_homing=False,
+# Instantiate a interface board.
+y_northward_waveplate_interface_board = ElliptecInterfaceBoard(
+    name='y_northward_waveplate_interface_board',
+    com_port='COM6',
     mock=False,
-    kinesis_path=r'C:\Program Files\Thorlabs\Kinesis',
 )
 # Instantiate a actuator.
-pump_795_vertical_actuator = Z812(
-    name='pump_795_vertical_actuator',
-    limits=(0, 12),
-    parent_device=pump_795_vertical_actuator_controller,
-    connection='1',
+y_northward_waveplate = ELL14(
+    name='y_northward_waveplate',
+    parent_device=y_northward_waveplate_interface_board,
+    connection='0',
+    serial_number='11400101',
+    unit_conversion_class=ELL14_Unit_Converter,
+    unit_conversion_parameters={'offset': 0.0},
 )
 ```
 
@@ -104,13 +105,23 @@ Some additional notes on the arguments are provided below.
 
 * More information about most of these arguments can be found in the docstrings for the classes.
 Those can be accessed using introspection in an interactive python session or can be manually located in the `labscript_devices.py` file in this directory.
-* In order for the code here to work, it needs to be able to access the Kinesis .NET libraries for interacting with the hardware.
-  * Since the location of these libraries can vary from system to system, the user must provide the path to them as the kinesis_path argument when instantiating an instance of the controller class in `connectiontable.py`.
-  * The standard install directory for these libraries is `C:\Program Files\Thorlabs\Kinesis`, though again the location may vary on your system.
-  * The `kinesis_path` is written using a raw string so that the python interpreter doesn't mistake those backslashes as escape characters, hench the `r` prefix.
-Alternatively, forward slashes can be used or the backslashes can be escaped.
-* The value for `connection` argument during the actuator instantiation doesn't have any effect, but a value must be provided.
-* As is standard with the labscript connection table, the `pump_795_vertical_actuator =` part isn't necessary.
+* Note that you must instantiate an interface board instance, then add any Elliptec devices as child devices of that board.
+* It is possible to create a mock interface board by setting `mock=True` in its instantiation.
+  Any device that is connected to it will also be simulated and will have serial number `12345678`.
+  This is useful for testing/development purposes.
+* The value for `connection` argument during the actuator instantiation must be the address of the Elliptec device.
+  * This is a single digit hex number in the range `0` to `F`.
+    See the "Testing the Device with the Thorlabs ELLO GUI" section above for details on how to find it.
+  * Note that the value for `connection` should be provided as a string.
+* The `serial_number` should be specified as a string, and can be checked with ELLO.
+  It is required here because the addresses of Elliptec devices can be changed in ELLO.
+  Providing the serial number makes it possible to check that the device at the given address has the specified serial number, ensuring that the correct device is connected.
+* The unit conversion class is used to convert back and forth between "base units" (i.e. position encoder counts) and real units, e.g. degrees or mm.
+  * Of course make sure to specify the correct conversion class for your device.
+  * Also, make sure that the `elliptec_unit_conversions.py` file has been copy/pasted into the l`abscript_suite\labscript_utils\unitconversions\` folder, as mentioned in the "Installing Software Dependencies" section above.
+  * The default parameters for the conversion class are set in `elliptec_unit_conversions.py` but can be adjusted by specifying their values in the connection table.
+    For example, you may find it useful to adjust the value for `'offset'` for rotation mounts holding waveplates such that the waveplate axis is vertical when the position is set to 0 degrees, even though that may not be the position corresponding to position encoder count zero.
+* As is standard with the labscript connection table, the `y_northward_waveplate =` part isn't necessary.
 It is sufficient (and necessary) to simply provide the `name` argument.
 
 ### Usage in a Labscript
@@ -120,14 +131,21 @@ An example is provided below.
 
 ```python
 # Move actuator to its desired position.
-pump_795_vertical_actuator.constant(actuator_position_pump_795_vertical)
+y_northward_waveplate.constant(
+        actuator_position_y_northward_waveplate,
+        units='deg',
+    )
 ```
 
-* Note that the object used is the instance of the `Z812` actuator class, not the instance of the `KDC101` controller class.
+* Note that the object used is the instance of the actuator device class, not the instance of the interface board class.
 * Since the output is static, no value for `time` is passed to `.constant()`.
-* Here it is assumed that there is a global called `actuator_position_pump_795_vertical` defined.
+* Here it is assumed that there is a global called `actuator_position_y_northward_waveplate` defined.
+* Note that the units are specified to be in `'deg'` instead of base units, which are position encoder counts.
+  It is also possible to specify the units as `'counts'` if desired, which is the default value.
 
 ## Generalizing to Other Hardware
+
+TODO
 
 Initially this code was developed to be very general and compatible with a wide range of Thorlabs actuators.
 However it quickly became clear that I was not familiar enough with the similarities and differences between the wide array of their motion control projects, so I decided to take a bottom-up approach.
@@ -140,6 +158,8 @@ The process for using the .NET code in python is relatively straightforward and 
 Additionally, the code in the KDC101 `blacs_workers.py` should be a useful reference.
 
 ## FAQ and Common Issues
+
+TODO
 
 * Blacs can't connect to the controller and throws an error.
   * Try the following:
