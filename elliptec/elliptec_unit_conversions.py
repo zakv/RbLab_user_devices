@@ -29,7 +29,7 @@ class ELL14_Unit_Converter(UnitConversion):
         # Convert to range -180 to +180 degrees.
         position_deg = position_deg % 360.
         if position_deg >= 180.:
-            position_deg = position_deg - 180.
+            position_deg = position_deg - 360.
 
         # Now convert to encoder counts.
         slope = self.parameters['slope']
