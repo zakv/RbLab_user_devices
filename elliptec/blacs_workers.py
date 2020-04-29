@@ -199,9 +199,6 @@ class _ElliptecInterface(object):
             raise ElliptecError(status_code)
 
     def _position_counts_to_str(self, position_in_counts, n_bits=32):
-        # Round position to nearest integer.
-        position_in_counts = round(position_in_counts)
-
         # Deal with the cast that position_in_counts is negative.
         if position_in_counts < 0:
             # Figure out value where numbers wrap around. For 2's complement
@@ -209,6 +206,11 @@ class _ElliptecInterface(object):
             wrap_around_value = 2**(n_bits - 1)
             amount_exceeded = position_in_counts - (-wrap_around_value)
             position_in_counts = wrap_around_value + amount_exceeded
+
+        # Round position to nearest integer.
+        position_in_counts = round(position_in_counts)
+        # Ensure numpy floats are converted to integers.
+        position_in_counts = int(position_in_counts)
 
         # Convert to series of hex characters with captial letters and no
         # leading "0x".
