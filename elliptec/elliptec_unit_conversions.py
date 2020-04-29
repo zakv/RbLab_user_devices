@@ -36,6 +36,9 @@ class ELL14_Unit_Converter(UnitConversion):
         offset = self.parameters['offset']
         position_counts = (position_deg - offset) / slope
 
+        # Round to nearest integer.
+        position_counts = round(position_counts)
+
         return position_counts
 
     def deg_from_base(self, position_counts):
