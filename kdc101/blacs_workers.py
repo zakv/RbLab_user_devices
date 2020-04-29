@@ -60,6 +60,44 @@ class _KDC101Interface(object):
         self.serial_number = serial_number
         self.kinesis_path = kinesis_path
 
+        # Import the required python libraries.
+        self._import_python_libraries()
+
+        # Import the kinesis .NET libraries.
+        self._import_kinesis_libraries()
+
+        # Open a connection to the controller.
+        self.open()
+
+        # Start the device polling.
+        # The polling loop requests regular status requests to the motor to
+        # ensure the program keeps track of the device.
+        self.controller.StartPolling(int(self.polling_interval))
+        time.sleep(0.5)
+
+        # Enable the channel otherwise any move is ignored.
+        self.controller.EnableDevice()
+        time.sleep(0.5)
+
+        # Call LoadMotorConfiguration on the device to initialize the
+        # DeviceUnitConverter object required for real world unit parameters.
+        # Loads configuration information into channel.
+        motor_configuration = self.controller.LoadMotorConfiguration(
+            str(self.serial_number)
+        )
+
+        # The .NET help files suggest the following step, but it seems to be
+        # fine to skip it. That may required connecting to the device with the
+        # Kinesis GUI first though.
+        # The API requires stage type to be specified.
+        # Name of motor or stage being controlled (check in Kinesis GUI).
+        # device_settings_name = 'Z812'
+        # motor_configuration.DeviceSettingsName = device_settings_name
+
+        # Get the device unit converter.
+        motor_configuration.UpdateCurrentConfiguration()
+
+    def _import_python_libraries(self):
         # Import required python libraries.
         global clr
         global System
@@ -71,9 +109,10 @@ class _KDC101Interface(object):
                 pythonnet is installed, which is possible via pip or conda."""
             raise ImportError(dedent(message))
 
+    def _import_kinesis_libraries(self):
         # Add path to kinesis .NET libraries if provided.
-        if kinesis_path and kinesis_path not in sys.path:
-            sys.path.append(kinesis_path)
+        if self.kinesis_path and (self.kinesis_path not in sys.path):
+            sys.path.append(self.kinesis_path)
 
         # Use pythonnet to import necessary kinesis .NET libraries.
         try:
@@ -82,6 +121,7 @@ class _KDC101Interface(object):
             global DeviceManagerCLI
             clr.AddReference("Thorlabs.MotionControl.DeviceManagerCLI")
             from Thorlabs.MotionControl import DeviceManagerCLI  # pylint: disable=import-error
+
             # Import class that controls KDC101.
             global KCubeDCServo
             clr.AddReference("Thorlabs.MotionControl.KCube.DCServoCLI")
@@ -91,12 +131,22 @@ class _KDC101Interface(object):
                 Kinesis folder is included in sys.path."""
             raise System.IO.FileNotFoundException(msg)
 
-        # Open a connection to the device. When blacs opens and tries to connect
-        # to many devices at once, this sometimes fails to find the device. To
-        # work around that, we'll try a few times before giving up.
+    def open(self):
+        """Open a connection to the device.
+
+        When blacs opens and tries to connect to many devices at once, the
+        drivers sometimes fails to find the device. To work around that, this
+        method tries a few times before giving up.
+
+        Raises:
+            DeviceNotReadyException: Raised if the connection to the device
+                fails multiple times. If this occurs, it's likel that the device
+                is not connected, or that the serial number provided is
+                incorrect.
+        """
         need_to_connect = True
         n_connection_attempt = 1
-        max_attempts = 5
+        max_attempts = 10
         while need_to_connect and (n_connection_attempt <= max_attempts):
             try:
                 # Print info for debugging.
@@ -119,36 +169,12 @@ class _KDC101Interface(object):
             except DeviceManagerCLI.DeviceNotReadyException as err:
                 n_connection_attempt += 1
                 connection_error = err  # Save for re-raising later.
+                time.sleep(1)
 
-        # If we haven't connected after multiple tries, give up and raise the
-        # error.
+        # If we still haven't connected after multiple tries, give up and raise
+        # the error.
         if need_to_connect:
             raise connection_error
-
-        # Start the device polling.
-        # The polling loop requests regular status requests to the motor to
-        # ensure the program keeps track of the device.
-        self.controller.StartPolling(int(self.polling_interval))
-        time.sleep(0.5)
-
-        # Enable the channel otherwise any move is ignored.
-        self.controller.EnableDevice()
-        time.sleep(0.5)
-
-        # Call LoadMotorConfiguration on the device to initialize the
-        # DeviceUnitConverter object required for real world unit parameters.
-        # Loads configuration information into channel.
-        motor_configuration = self.controller.LoadMotorConfiguration(
-            str(self.serial_number)
-        )
-
-        # The API requires stage type to be specified.
-        # Name of motor or stage being controlled (check in Kinesis GUI).
-        # device_settings_name = 'Z812'
-        # motor_configuration.DeviceSettingsName = device_settings_name
-
-        # Get the device unit converter.
-        motor_configuration.UpdateCurrentConfiguration()
 
     @property
     def is_homed(self):
