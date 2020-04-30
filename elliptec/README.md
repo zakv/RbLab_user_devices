@@ -144,6 +144,38 @@ y_northward_waveplate.constant(
 * Here it is assumed that there is a global called `actuator_position_y_northward_waveplate` defined.
 * Note that the units are specified to be in `'deg'` instead of base units, which are position encoder counts.
   It is also possible to specify the units as `'counts'` if desired, which is the default value.
+* If this is the first time that this device is used, trying controlling it via its blacs tab and ensure that the device moves by the instructed amount before using it in a labscript.
+  The unit conversion classes defined in this module should have the correct conversion factors, but it's worth double-checking.
+  See the "ELL14" part of the "Hardware Quirks" section for some justification on why checking this is important.
+
+## Hardware Quirks
+
+The sections below list quirks of different Elliptec devices.
+
+### ELL14
+
+The ELL14's encoder has a few quirks.
+
+First of all, the encoder has a bit of noise.
+That means that if the current position of the device is requested multiple times, it may return multiple different values even if the device hasn't moved.
+Fortunately that noise level is quite low, often only differing by one encoder count which corresponds to a few thousandths of a degree.
+
+Also, different ELL14 can have different encoders, which even have different conversions between encoder counts and position in degrees.
+Older ELL14 had an encoder where 262,144 counts corresponded to a rotation by 360 degrees.
+That encoder stopped being manufactured so Thorlabs had to replace it with a different encoder on newer ELL14, and the new encoder has only 143,360 counts over a 360 degree rotation.
+
+The unit conversion class for the ELL14 is written with the default conversion factor of 143,360 counts per 360 degrees, corresponding to the values for newer ELL14.
+If you have an older ELL14 with the old encoder, be sure to adjust the conversion factor appropriately by adding the key/value pair `'slope':262144./360` to the `unit_conversion_parameters` dictionary in the connection table entry for the device.
+
+If you're not sure which encoder your ELL14 has, an easy way to check is to do the following:
+
+1. Open ELLO.
+1. Connect to the device.
+    * Keep in mind that only one application at a time can connect to the device, so close blacs first if necessary.
+1. Expand "Details" section.
+1. Multiply the value under "Pulses Per deg" by 360.
+    * This value will be slightly off due to rounding errors, but should be close to either 262,144 or 143,360.
+1. Make sure to disconnect from the device in ELLO before trying to connect to it again from blacs.
 
 ## Generalizing to Other Hardware
 
@@ -186,6 +218,9 @@ TODO
     1. If this it the first time that you've added an Elliptec device to your connection table, also ensure that the required software dependencies are installed (see "Installing Software Dependencies" above).
     1. Sometimes the device doesn't connect on startup but will connect if you reinitialize its blacs tab by clicking on the blue circular arrow at the top right of its tab.
     1. Occasionally restarting the computer, or at least the USB bus can resolve the issue, especially if the last program to interact with the controller didn't exit gracefully.
+    1. Click the icon in blacs to display the terminal output for the device.
+    Messages to/from the device are printed to that terminal, which may be helpful for debugging.
+    See the Elliptec API for instructions on how to understand those messages.
 * "Output values set on this device do not match the BLACS front panel" warning
   * This warning can occur for different reasons, and its usually best to just take the value specified by the controller, as that provides the actual position of the actuator.
   Often the error is quite small, frequently just by one encoder count, and can simply be ignored.
