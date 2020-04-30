@@ -47,7 +47,7 @@ The following software needs to be installed in order to use this module:
   * To install via pip: `pip install pyvisa`
   * If you do not have a VISA implementation installed, you may need to install one as well.
     See the pyvisa installation instructions for more information.
-* Copy/paste the `elliptec_unit_conversions.py` file included in this module to the  `labscript_suite\labscript_utils\unitconversions\` folder.
+* Copy/paste the `elliptec_unit_conversions.py` file included in this module to the `labscript_suite\labscript_utils\unitconversions\` folder.
   * This is necessary in order to be able to specify positions in real units, e.g. degrees, rather than in units of position encoder counts.
 
 ### Testing the Device with the Thorlabs ELLO GUI
@@ -162,6 +162,7 @@ Below are some required steps to add support for new devices.
   * If there is a class already present to support the units that you need, you can subclass that class.
     Simply overwrite the default values for the conversion parameters as necessary to match the specifications of your device.
   * See the labscript documentation for more information on how to write unit conversion classes.
+  * Make sure to copy/paste our new version of this file to the `labscript_suite\labscript_utils\unitconversions\` folder.
 
 There are many good resources to reference when adding support for a new devices; some are listed below.
 
@@ -174,29 +175,30 @@ There are many good resources to reference when adding support for a new devices
 
 TODO
 
-* Blacs can't connect to the controller and throws an error.
+* Blacs can't connect to the device and throws an error.
   * Try the following:
     1. Read the full error traceback as it will likely tell you exactly what the issue is, which will speed up your debugging.
-    1. Ensure that the controller is powered on and plugged into the computer on which blacs is running.
-    1. Ensure that the serial number specified for the device in the connection table is correct.
-    1. Ensure that you've provided the correct path to the Kinesis folder in the `kinesis_path` argument in the connection table entry for the controller.
-    1. Make sure that no other application, including the Kinesis GUI, is connected to the device, as only one application can connect to it at a time.
-    1. As a debugging step, ensure that you can control the device from the Kinesis GUI.
-        * Make sure to disconnect from (aka "unload") the controller in the GUI before trying to connect to it again with blacs.
-    1. If this it the first time that you've added a KDC101 to your connection table, also ensure that the required software dependencies are installed (see "Installing Software Dependencies" above).
+    1. Ensure that the interface board and Elliptec device are powered on and connected the computer on which blacs is running.
+    1. Ensure that the serial number specified for the device in the connection table is correct, and is specified as a string instead of as an integer.
+    1. Make sure that no other application, including ELLO, is connected to the interface board, as only one application can connect to it at a time.
+    1. As a debugging step, ensure that you can control the device from Ello.
+        * Make sure to disconnect from the interface board in the GUI before trying to connect to it again with blacs.
+    1. If this it the first time that you've added an Elliptec device to your connection table, also ensure that the required software dependencies are installed (see "Installing Software Dependencies" above).
     1. Sometimes the device doesn't connect on startup but will connect if you reinitialize its blacs tab by clicking on the blue circular arrow at the top right of its tab.
     1. Occasionally restarting the computer, or at least the USB bus can resolve the issue, especially if the last program to interact with the controller didn't exit gracefully.
-    1. If the controller was created with `allow_homing=False` and the device isn't homed when the its blacs tab is initialized then it will throw a `RuntimeError`.
-    In this case the user must home the device using the Kinesis GUI.
-    Of course make sure it is safe to do so by blocking any relevant high power beams or doing anything else necessary before homing the device.
 * "Output values set on this device do not match the BLACS front panel" warning
   * This warning can occur for different reasons, and its usually best to just take the value specified by the controller, as that provides the actual position of the actuator.
+  Often the error is quite small, frequently just by one encoder count, and can simply be ignored.
   Also, simply setting the output to the desired value will instruct the controller to move to that position, which typically alleviates this warning.
   Below are some reasons why this warning may appear.
     * Often it's just because the actuator tried to move to the desired position and ended up close to, but no exactly at, the desired value.
-    In this case it's best to just take the value specified by the controller.
-    When this occurs, the errors are typically less than 1 um, so unless your system is extremely sensitive, the error typically doesn't matter.
-    Also, sometimes the servo will settle to the correct value a few seconds after this warning was issued.
-    * This warning may also occur if someone uses the controls on the KDC101 itself to move the actuator.
-    Again in this case one should use the values specified by the controller.
+    In this case it's best to just take the value specified by the controller, or simply ignore the warning.
+    When this occurs, the errors are typically very, so unless your system is extremely sensitive, the error typically doesn't matter.
+    * For the ELL14 (and possibly other Elliptec devices as well) the encoder has a bit of noise to it.
+    In other words multiple calls to read its position may return slightly different values, even if the device hasn't moved at all.
+    Since blacs periodically checks in on the device to see what it's position is, often it will return a slightly different value than before and cause this warning to appear spontaneously.
+    Again, this error is typically very small and so the warning is likely fine to ignore.
+    * This warning may also occur if someone uses the controls on the interface board itself to move the actuator.
+    Again in this case one should use the values specified by the device.
     * This may also occur when starting up blacs if the device's position has changed since when blacs was last closed.
+    Again in this case one should use the values specified by the device.
