@@ -59,7 +59,7 @@ The device can be easily tested by opening the ELLO program that is included in 
 In ELLO, select the COM port for your Elliptec interface board (the PCB with a USB connector on one side and a ribbon cable connector on the other), and set the "Search Range" as desired, and click connect.
 If you're not sure which COM port corresponds to your interface board, one way to check is to unplug/plug the device and see which COM port appears/disappears from the list.
 The search range will look for devices connected to the interface board, which will have an address specified by a 1-digit hex number, `0` to `F`.
-There may be multiple devices connected to the interface board if a ELLB bus distributor is used.
+There may be multiple devices connected to the interface board, for example when using a ELLB bus distributor or a custom ribbon cable with multiple connections.
 Take note of the COM port and the address as these will be needed later.
 
 This may seem a little confusing, but the COM port and address are different.
@@ -114,8 +114,10 @@ Those can be accessed using introspection in an interactive python session or ca
     See the "Testing the Device with the Thorlabs ELLO GUI" section above for details on how to find it.
   * Note that the value for `connection` should be provided as a string.
 * The `serial_number` should be specified as a string, and can be checked with ELLO.
-  It is required here because the addresses of Elliptec devices can be changed in ELLO.
-  Providing the serial number makes it possible to check that the device at the given address has the specified serial number, ensuring that the correct device is connected.
+  * Providing the serial number makes it possible to check that the device at the given address has the specified serial number, ensuring that the correct device is connected.
+  Without this it would be easy to mistakenly connect to the wrong device.
+  For example, one might accidentally use the correct address but with the wrong interface board.
+  Also, the addresses of boards can be changed using the Elliptec API, so including the serial number ensures that connections don't accidentally get swapped if the device addresses change.
 * The unit conversion class is used to convert back and forth between "base units" (i.e. position encoder counts) and real units, e.g. degrees or mm.
   * Of course make sure to specify the correct conversion class for your device.
   * Also, make sure that the `elliptec_unit_conversions.py` file has been copy/pasted into the l`abscript_suite\labscript_utils\unitconversions\` folder, as mentioned in the "Installing Software Dependencies" section above.
@@ -145,17 +147,28 @@ y_northward_waveplate.constant(
 
 ## Generalizing to Other Hardware
 
-TODO
+The code here was written with the intent that it should be easy to add support for other Elliptec devices.
+Below are some required steps to add support for new devices.
 
-Initially this code was developed to be very general and compatible with a wide range of Thorlabs actuators.
-However it quickly became clear that I was not familiar enough with the similarities and differences between the wide array of their motion control projects, so I decided to take a bottom-up approach.
-Instead of writing the most general code, I wrote code specific to static outputs with the KDC101 and plan to generalize it as necessary.
+* Add a class to `labscript_devices.py` for your device.
+  * Your class should inherit from the `ElliptecDevice` class defined in that file and overwrite the appropriate class attributes.
+  See the `ELL14` class in that file for an example of how to do that.
+* Some devices may need to use additional methods from the Elliptec API.
+  To support those, add the required new methods to the `blacs_workers._ElliptecInterface` class.
+  See the `_ElliptecInterface.move()` method there for an example on how to write methods like that.
+  * See the Elliptec API documentation, or for a list of possible commands.
+* To support setting positions with real units, e.g. millimeters or degrees, add a class to `elliptec_unit_conversions.py`.
+  * This isn't necessary for some devices, such as the multi-position sliders.
+  * If there is a class already present to support the units that you need, you can subclass that class.
+    Simply overwrite the default values for the conversion parameters as necessary to match the specifications of your device.
+  * See the labscript documentation for more information on how to write unit conversion classes.
 
-When generalizing the code, it's important to have good resources.
-A lot of helpful information, including example C# code for various pieces of hardware, is provided in the Kinesis help files.
-These can be accessed by opening the `Thorlabs.MotionControl.DotNet_API.chm` help file in the Kinesis directory.
-The process for using the .NET code in python is relatively straightforward and is explained in the pythonnet documentation, and a specific example of using it with the Kinesis .NET API is available in the github repo mentioned in the introduction.
-Additionally, the code in the KDC101 `blacs_workers.py` should be a useful reference.
+There are many good resources to reference when adding support for a new devices; some are listed below.
+
+* The Elliptec API Manual.
+* The manual for your specific Elliptec Device.
+* The code, comments, docstrings, and README from this module.
+* The labscript documentation.
 
 ## FAQ and Common Issues
 
