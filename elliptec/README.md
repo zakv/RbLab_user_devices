@@ -205,8 +205,6 @@ There are many good resources to reference when adding support for a new devices
 
 ## FAQ and Common Issues
 
-TODO
-
 * Blacs can't connect to the device and throws an error.
   * Try the following:
     1. Read the full error traceback as it will likely tell you exactly what the issue is, which will speed up your debugging.
@@ -228,7 +226,7 @@ TODO
   Below are some reasons why this warning may appear.
     * Often it's just because the actuator tried to move to the desired position and ended up close to, but no exactly at, the desired value.
     In this case it's best to just take the value specified by the controller, or simply ignore the warning.
-    When this occurs, the errors are typically very, so unless your system is extremely sensitive, the error typically doesn't matter.
+    When this occurs, the errors are typically pretty small, so unless your system is extremely sensitive, the error typically doesn't matter.
     * For the ELL14 (and possibly other Elliptec devices as well) the encoder has a bit of noise to it.
     In other words multiple calls to read its position may return slightly different values, even if the device hasn't moved at all.
     Since blacs periodically checks in on the device to see what it's position is, often it will return a slightly different value than before and cause this warning to appear spontaneously.
