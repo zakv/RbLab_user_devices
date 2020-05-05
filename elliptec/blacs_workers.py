@@ -193,7 +193,7 @@ class _ElliptecInterface(object):
             raise connection_error
 
     def open(self):
-        """Re-open a connection to the device after calling self.close()."""
+        """Re-open a connection to the device after calling `self.close()`."""
         self.visa_resource.open()
 
     def close(self):
