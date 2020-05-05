@@ -551,7 +551,7 @@ class ElliptecWorker(Worker):
         self.check_serial_numbers()
 
     def check_serial_numbers(self):
-        """Compare serial numbers in connection table to actual serail numbers.
+        """Compare serial numbers in connection table to actual serial numbers.
 
         This method iterates over the Elliptec devices connected to this
         interface bus in the connection table and ensures that their actual
