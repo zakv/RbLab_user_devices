@@ -33,8 +33,10 @@ class PCOCameraTab(IMAQdxCameraTab):
             save_data['autoRange_x'] = autoRange_x
             save_data['autoRange_y'] = autoRange_y
 
-            # TODO: color scale limits?
-            # state = self.image.getImageItem().getViewBox().state
+            # Save color scale limits.
+            color_scale_min, color_scale_max = self.image.getLevels()
+            save_data['color_scale_min'] = color_scale_min
+            save_data['color_scale_max'] = color_scale_max
 
         return save_data
 
@@ -42,7 +44,7 @@ class PCOCameraTab(IMAQdxCameraTab):
         super().restore_save_data(save_data)
 
         # Restore plot settings if they were saved.
-        if 'image_shape' in save_data:
+        if 'image_shape' in save_data and 'image_dtype' in save_data:
             # We have to display some image, otherwise the plot settings will be
             # overwritten once the first image is displayed. Restore a mostly
             # blank image of the saved size.
@@ -54,13 +56,29 @@ class PCOCameraTab(IMAQdxCameraTab):
             self.image.setImage(dummy_image)
 
             # Restore x and y ranges.
-            view_box = self.image.getImageItem().getViewBox()
-            view_box.setRange(
-                xRange=save_data['targetRange_x'],
-                yRange=save_data['targetRange_y'],
-            )
+            try:
+                view_box = self.image.getImageItem().getViewBox()
+                view_box.setRange(
+                    xRange=save_data['targetRange_x'],
+                    yRange=save_data['targetRange_y'],
+                )
+            except KeyError:
+                pass
 
             # Restore whether the x and y ranges are automatically adjusted.
-            autoRange_x = save_data['autoRange_x']
-            autoRange_y = save_data['autoRange_y']
-            view_box.enableAutoRange(x=autoRange_x, y=autoRange_y)
+            try:
+                view_box.enableAutoRange(
+                    x=save_data['autoRange_x'],
+                    y=save_data['autoRange_y'],
+                )
+            except KeyError:
+                pass
+
+            # Restore color scale range.
+            try:
+                self.image.setLevels(
+                    save_data['color_scale_min'],
+                    save_data['color_scale_max'],
+                )
+            except KeyError:
+                pass
