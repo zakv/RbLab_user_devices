@@ -52,7 +52,13 @@ class PCOCameraTab(IMAQdxCameraTab):
             image_dtype = np.dtype(save_data['image_dtype'])
             dummy_image = np.zeros(image_shape, dtype=image_dtype)
             # Make one pixel nonzero so histogram binning doesn't error.
-            dummy_image[0, 0] = 1
+            # TODO: Fixed by https://github.com/pyqtgraph/pyqtgraph/pull/767
+            # which will be included in pyqtgraph 0.11 so we should remove this
+            # and just display a blank image once that is released.
+            if dummy_image.ndim == 2:
+                dummy_image[0, 0] = 1
+            if dummy_image.ndim == 3:
+                dummy_image[:, 0, 0] = 1
             self.image.setImage(dummy_image)
 
             # Restore x and y ranges.
