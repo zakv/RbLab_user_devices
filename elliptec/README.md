@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This directory contains the code necessary to use Thorlabs Elliptec devices.
+This directory contains the code necessary to use Thorlabs Elliptec devices with labscript.
 
 The code in this package is primarily based on the Zaber Stage controllers from the official labscript_utils distribution.
 In fact, it was started by copy/pasting the files from the Zaber Stage directory, which is why the copyright info was retained.
@@ -70,7 +70,7 @@ If so, you're in good shape.
 While you have ELLO open and connected to your device, expand the "Details" section and take note of the serial number as you'll need to know that as well.
 
 Once you are done testing out the device, make sure to click the disconnect button.
-Only one application at a time (at least one Windows) can connect to the device, so you'll have to disconnect from in in ELLO before connecting to it with blacs.
+Only one application at a time (at least on Windows) can connect to the device, so you'll have to disconnect from in in ELLO before connecting to it with blacs.
 
 ## Example Usage
 
@@ -96,8 +96,9 @@ y_northward_waveplate = ELL14(
     parent_device=y_northward_waveplate_interface_board,
     connection='0',
     serial_number='11400101',
+    home_on_startup=True,
     unit_conversion_class=ELL14_Unit_Converter,
-    unit_conversion_parameters={'offset': 0.0},
+    unit_conversion_parameters={'offset': -40.3},
 )
 ```
 
@@ -118,6 +119,25 @@ Those can be accessed using introspection in an interactive python session or ca
   Without this it would be easy to mistakenly connect to the wrong device.
   For example, one might accidentally use the correct address but with the wrong interface board.
   Also, the addresses of boards can be changed using the Elliptec API, so including the serial number ensures that connections don't accidentally get swapped if the device addresses change.
+* The option `home_on_startup` sets whether or not the device is homed when blacs connects to it, either at startup or when the device's blacs tab is restarted.
+  * It's important to home the device each time it is power cycled.
+  If this isn't done, the actual position of the device will be offset from the set position.
+  The size of this offset depends on the initial position of the device when it was last turned on.
+  Since the device may be at a different position each time it is turned on, this can be problematic.
+  To avoid that, you must home the device which will remove that offset.
+  * Although it's necessary to home the device each time it is powered on, it is not necessary to home the device again if you simply disconnect from it then reconnect.
+  That means that you can connect to the device using ELLO and home it, then disconnect from it in ELLO and start up blacs.
+  That allows you to home a device that has `home_on_startup` set to `False`.
+  * It is important to set `home_on_startup` to `False` if homing the device could be dangerous.
+  For example, if homing the device may point a high power beam in an unsafe direction, make sure to set `home_on_startup=False` in the connection table entry for that device.
+    * It is still important to home these devices though to ensure repeatable positioning after a power cycle.
+    * Home such devices by first ensuring that it is safe to do so, e.g. by turning off or blocking high power beams, then using ELLO to send a home command.
+    After that disconnect from the device in ELLO and start blacs.
+    Note that you'll have to close blacs to disconnect from the device before ELLO will be able to connect to it.
+  * Generally it is best to set `home_on_startup=True` if it is safe to do so, as that ensures that the device is always homed whenever blacs uses it.
+  * Ideally the code here would check if the device is homed to avoid homing when its not necessary and to make sure devices with `home_on_startup=False` are homed before blacs tries to use them.
+  However, there is no way to check if a device is homed with the Elliptec API, so the only way to be sure is to actually home the device.
+  Hopefully a check like this will be possible in future versions of the Elliptec API.
 * The unit conversion class is used to convert back and forth between "base units" (i.e. position encoder counts) and real units, e.g. degrees or mm.
   * Of course make sure to specify the correct conversion class for your device.
   * Also, make sure that the `elliptec_unit_conversions.py` file has been copy/pasted into the l`abscript_suite\labscript_utils\unitconversions\` folder, as mentioned in the "Installing Software Dependencies" section above.
