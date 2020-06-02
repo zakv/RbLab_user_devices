@@ -19,10 +19,12 @@ class ElliptecDevice(StaticAnalogQuantity):
 
     @set_passed_properties(
         property_names={
-            'connection_table_properties': ['serial_number', 'limits']
+            'connection_table_properties':
+                ['serial_number', 'home_on_startup', 'limits']
         }
     )
-    def __init__(self, *args, serial_number, limits=None, **kwargs):
+    def __init__(self, *args, serial_number, home_on_startup, limits=None,
+                 **kwargs):
         """Static device for controlling the position of an Elliptec device.
 
         Args:
@@ -32,6 +34,27 @@ class ElliptecDevice(StaticAnalogQuantity):
                 can be determined by looking at the "Details" tab after
                 connecting to the device with the ELLO GUI provided by Thorlabs.
                 Note that this should be provided as a string.
+            home_on_startup (bool): Set whether or not the device should be
+                homed when blacs connects to it. The device should be homed each
+                time that it is powered on, otherwise the device's actual
+                position may be offset from its nominal set position. Generally
+                it's best to set home_on_startup to True if it is safe to do so.
+                However, it is possbile to set it to False, which should be done
+                e.g. if homing the device may create an unsafe condition, such
+                as by pointing a high power laser in an unsafe direction. In
+                this case the device can be told to home using the ELLO software
+                provided by Thorlabs once the user has ensured that it is safe
+                to do so. Note that only one piece of software may connect to
+                the interface board at a time, so you will need to close blacs
+                before homing the device with ELLO. It is necessary to home the
+                device after it has been turned off, but it is not necessary to
+                home each it time the computer disconnects/connects to it. That
+                means that it is ok to home the device in ELLO, then disconnect
+                from it, then start blacs.
+                    Ideally the code here would automatically check if the
+                device has been homed since it was last powered up, but there is
+                no function in the Elliptec API to check whether or not a device
+                has been homed.
             limits (tuple of two floats, optional): (Default=None) A tuple
                 containing two floats. The first of which specifies the minimum
                 value that the actuator should be allowed to go to, and the

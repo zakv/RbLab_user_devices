@@ -550,6 +550,9 @@ class ElliptecWorker(Worker):
         # table.
         self.check_serial_numbers()
 
+        # Home actuators that are configured to be homed on startup.
+        self.do_homing()
+
     def check_serial_numbers(self):
         """Compare serial numbers in connection table to actual serial numbers.
 
@@ -582,6 +585,12 @@ class ElliptecWorker(Worker):
                            f"to have serial number '{serial_number}' in the "
                            "connection table.")
                 raise ValueError(message)
+
+    def do_homing(self):
+        """Home devices that are configured to be homed on startup."""
+        for connection, home_on_startup in self.homing_settings.items():
+            if home_on_startup:
+                self.controller.home(connection)
 
     def check_remote_values(self):
         remote_values = {}
