@@ -12,6 +12,6 @@ from labscript_devices import register_classes
 
 register_classes(
     'ElliptecInterfaceBoard',
-    BLACS_tab='userlib.user_devices.RbLab.elliptec.blacs_tabs.ElliptecInterfaceBoardTab',
+    BLACS_tab='user_devices.RbLab.elliptec.blacs_tabs.ElliptecInterfaceBoardTab',
     runviewer_parser=None,
 )

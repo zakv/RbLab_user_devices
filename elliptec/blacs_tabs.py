@@ -70,7 +70,7 @@ class ElliptecInterfaceBoardTab(DeviceTab):
         # Create and set the primary worker
         self.create_worker(
             'main_worker',
-            'userlib.user_devices.RbLab.elliptec.blacs_workers.ElliptecWorker',
+            'user_devices.RbLab.elliptec.blacs_workers.ElliptecWorker',
             {
                 'com_port': self.com_port,
                 'mock': self.mock,

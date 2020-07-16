@@ -80,9 +80,9 @@ Below is an example of how include a controller and actuator in `connectiontable
 
 ```python
 # Import the devices.
-from userlib.user_devices.RbLab.elliptec.labscript_devices import ElliptecInterfaceBoard, ELL14
+from user_devices.RbLab.elliptec.labscript_devices import ElliptecInterfaceBoard, ELL14
 # Import the unit converter.
-from userlib.user_devices.RbLab.elliptec.elliptec_unit_conversions import ELL14_Unit_Converter
+from user_devices.RbLab.elliptec.elliptec_unit_conversions import ELL14_Unit_Converter
 
 # Instantiate a interface board.
 y_northward_waveplate_interface_board = ElliptecInterfaceBoard(
