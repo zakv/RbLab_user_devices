@@ -12,6 +12,6 @@ from labscript_devices import register_classes
 
 register_classes(
     'KDC101',
-    BLACS_tab='userlib.user_devices.RbLab.kdc101.blacs_tabs.KDC101Tab',
+    BLACS_tab='user_devices.RbLab.kdc101.blacs_tabs.KDC101Tab',
     runviewer_parser=None,
 )

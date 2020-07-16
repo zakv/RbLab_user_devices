@@ -58,7 +58,7 @@ class KDC101Tab(DeviceTab):
         # Create and set the primary worker
         self.create_worker(
             'main_worker',
-            'userlib.user_devices.RbLab.kdc101.blacs_workers.KDC101Worker',
+            'user_devices.RbLab.kdc101.blacs_workers.KDC101Worker',
             {
                 'serial_number': self.serial_number,
                 'allow_homing': self.allow_homing,

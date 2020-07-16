@@ -81,7 +81,7 @@ Below is an example of how include a controller and actuator in `connectiontable
 
 ```python
 # Import the devices.
-from userlib.user_devices.RbLab.kdc101.labscript_devices import KDC101, Z812
+from user_devices.RbLab.kdc101.labscript_devices import KDC101, Z812
 
 # Instantiate a controller.
 pump_795_vertical_actuator_controller = KDC101(
