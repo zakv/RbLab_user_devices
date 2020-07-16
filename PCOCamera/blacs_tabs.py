@@ -8,7 +8,7 @@ from labscript_devices.IMAQdxCamera.blacs_tabs import IMAQdxCameraTab
 class PCOCameraTab(IMAQdxCameraTab):
 
     # Override worker class.
-    worker_class = 'userlib.user_devices.RbLab.PCOCamera.blacs_workers.PCOCameraWorker'
+    worker_class = 'user_devices.RbLab.PCOCamera.blacs_workers.PCOCameraWorker'
 
     def get_save_data(self):
         save_data = super().get_save_data()
