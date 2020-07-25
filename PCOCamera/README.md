@@ -42,7 +42,7 @@ In addition to the Labscript suite, the following software needs to be installed
 
 The compiled functions for interfacing with PCO cameras are stored in a library called S2C_Cam.dll.
 In order for Instrumental to access that library, its path must be added to the list of folders stored in the system's Path environment variable.
-The path to S2C_Cam.dll will depend on the install location of the PCO SDK, but the default for a system-wide install is `C:\Program Files (x86)\Digital Camera Toolbox\pco.sdk\bin64`.
+The path to S2C_Cam.dll will depend on the install location of the PCO SDK, but the default for a system-wide install is `C:\Program Files (x86)\PCO Digital Camera Toolbox\pco.sdk\bin64`.
 Note that this is the path to the 64 bit library.
 If your system is running 32 bit Python, use the S2C_Cam.dll in the `bin` folder rather than the `bin64` folder.
 
