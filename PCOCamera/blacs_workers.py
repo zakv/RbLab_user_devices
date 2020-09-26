@@ -685,9 +685,56 @@ class PCOCamera(object):
 class PCOCameraWorker(IMAQdxCameraWorker):
     """PCO API Camera Worker.
 
-    Inherits from IMAQdxCameraWorker.
+    Inherits from IMAQdxCameraWorker. Little is changed from the parent class;
+    the main difference is that the interface_class is changed to use the
+    PCOCamera class.
 
-    Args:
-        See base class.
+    The other difference is that some changes are made so that the camera isn't
+    re-programmed to run in manual mode between shots unless it is actually used
+    in manual mode. This reduces the time needed to configure the camera when
+    multiple shots are run in a row without the use using the "snap" or
+    "continuous" acquisition features in the blacs tab. This is because in that
+    case the camera doesn't need to be configured for manual mode then
+    reconfigured for buffered acquisition. In order to achieve this, the
+    attribute self.manual_mode_camera_attributes is overwritten to be an empty
+    dictionary, and the actual manual mode camera attributes are stored as
+    self.actual_manual_mode_camera_attributes.
+
+    Args: See base class.
     """
     interface_class = PCOCamera
+
+    def init(self):
+        result = super().init()
+        self.is_configured_for_manual_mode = True
+        self.actual_manual_mode_camera_attributes = self.manual_mode_camera_attributes
+        # The following line makes is so that the call to
+        # self.set_attributes_smart() in self.transition_to_manual() doesn't
+        # actually change anything, so the camera stays programmed for buffered
+        # acquisition until self.configure_for_manual_mode() is called.
+        self.manual_mode_camera_attributes = {}
+        return result
+
+    def transition_to_buffered(self, device_name, h5_filepath, initial_values,
+                               fresh):
+        result = super().transition_to_buffered(
+            device_name,
+            h5_filepath,
+            initial_values,
+            fresh,
+        )
+        self.is_configured_for_manual_mode = False
+        return result
+
+    def configure_for_manual_mode(self):
+        if not self.is_configured_for_manual_mode:
+            self.set_attributes_smart(self.actual_manual_mode_camera_attributes)
+            self.is_configured_for_manual_mode = True
+
+    def snap(self):
+        self.configure_for_manual_mode()
+        return super().snap()
+
+    def start_continuous(self, dt):
+        self.configure_for_manual_mode()
+        return super().start_continuous(dt)
