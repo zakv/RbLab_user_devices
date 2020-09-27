@@ -695,10 +695,16 @@ class PCOCameraWorker(IMAQdxCameraWorker):
     multiple shots are run in a row without the use using the "snap" or
     "continuous" acquisition features in the blacs tab. This is because in that
     case the camera doesn't need to be configured for manual mode then
-    reconfigured for buffered acquisition. In order to achieve this, the
-    attribute self.manual_mode_camera_attributes is overwritten to be an empty
-    dictionary, and the actual manual mode camera attributes are stored as
-    self.actual_manual_mode_camera_attributes.
+    reconfigured for buffered acquisition.
+
+    In order to achieve this, the attribute self.manual_mode_camera_attributes
+    is briefly overwritten to be an empty dictionary during
+    self.transition_to_manual(). The actual manual mode camera attributes are
+    always available as self.actual_manual_mode_camera_attributes. This approach
+    is a bit hacky but it maximizes code reuse and is better than copy/pasting
+    all the code from the base class's transition_to_manual() just to omit that
+    one line. This way upstream changes to the base class's
+    transition_to_manual() don't need to be copy/pasted manually to this class.
 
     Args: See base class.
     """
@@ -708,11 +714,6 @@ class PCOCameraWorker(IMAQdxCameraWorker):
         result = super().init()
         self.is_configured_for_manual_mode = True
         self.actual_manual_mode_camera_attributes = self.manual_mode_camera_attributes
-        # The following line makes is so that the call to
-        # self.set_attributes_smart() in self.transition_to_manual() doesn't
-        # actually change anything, so the camera stays programmed for buffered
-        # acquisition until self.configure_for_manual_mode() is called.
-        self.manual_mode_camera_attributes = {}
         return result
 
     def transition_to_buffered(self, device_name, h5_filepath, initial_values,
@@ -724,6 +725,17 @@ class PCOCameraWorker(IMAQdxCameraWorker):
             fresh,
         )
         self.is_configured_for_manual_mode = False
+        return result
+
+    def transition_to_manual(self):
+        # The following line makes is so that the call to
+        # self.set_attributes_smart() in self.transition_to_manual() doesn't
+        # actually change anything, so the camera stays programmed for buffered
+        # acquisition until self.configure_for_manual_mode() is called.
+        self.manual_mode_camera_attributes = {}
+        result = super().transition_to_manual()
+        # Now set self.manual_mode_camera_attributes back to its actual value.
+        self.manual_mode_camera_attributes = self.actual_manual_mode_camera_attributes
         return result
 
     def configure_for_manual_mode(self):
