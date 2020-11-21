@@ -91,10 +91,15 @@ class _MockElliptecInterface(MockZaberInterface):
         self.last_set_positions_in_counts[address] = None
         print(f"Mock device {address} homed.")
 
-    def move(self, address, position):
-        super().move(address, position)
-        # Update last set position.
-        self.last_set_positions_in_counts[address] = position
+    def move(self, address, position, fresh=True):
+        last_set_position = self.last_set_positions_in_counts[address]
+        if fresh or (position != last_set_position):
+            super().move(address, position)
+            # Update last set position.
+            self.last_set_positions_in_counts[address] = position
+        else:
+            print(
+                f"Mock used smart programming; didn't move address {address}.")
 
     def get_serial_number(self, address):
         return '12345678'
