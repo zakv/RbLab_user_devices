@@ -14,7 +14,6 @@ import time
 import labscript_utils.h5_lock  # Must be imported be importing h5py
 import h5py
 
-import labscript_utils.h5_lock
 from blacs.tab_base_classes import Worker
 from labscript_devices.ZaberStageController.blacs_workers import \
     MockZaberInterface
