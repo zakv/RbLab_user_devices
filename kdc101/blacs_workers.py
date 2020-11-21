@@ -189,6 +189,7 @@ class _KDC101Interface(object):
 
     def home(self):
         print("Homing...")
+        self.last_set_position = None
         self.controller.Home(self.default_timeout)
         print("Finshed Homing.")
 
