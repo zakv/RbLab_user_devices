@@ -644,6 +644,11 @@ class ElliptecWorker(Worker):
         for connection, home_on_startup in self.homing_settings.items():
             if home_on_startup:
                 self.controller.home(connection)
+                # Return to position set in GUI.
+                if connection in self.initial_front_panel_values:
+                    position = self.initial_front_panel_values[connection]
+                    values = {connection: position}
+                    self.move(values, fresh=True)
 
     def check_remote_values(self):
         remote_values = {}

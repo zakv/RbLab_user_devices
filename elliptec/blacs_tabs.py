@@ -77,6 +77,7 @@ class ElliptecInterfaceBoardTab(DeviceTab):
                 'child_connections': self.child_connections,
                 'connection_serial_numbers': self.connection_serial_numbers,
                 'homing_settings': self.homing_settings,
+                'initial_front_panel_values': self.get_front_panel_values(),
             },
         )
         self.primary_worker = 'main_worker'
