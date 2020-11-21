@@ -64,7 +64,7 @@ class ElliptecInterfaceBoardTab(DeviceTab):
 
         # Set the capabilities of this device
         self.supports_remote_value_check(True)
-        self.supports_smart_programming(False)
+        self.supports_smart_programming(True)
 
     def initialise_workers(self):
         # Create and set the primary worker

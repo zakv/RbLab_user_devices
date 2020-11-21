@@ -8,6 +8,7 @@
 # the project for the full license.                                 #
 #                                                                   #
 #####################################################################
+from collections import defaultdict
 import sys
 import time
 
@@ -129,6 +130,14 @@ class _ElliptecInterface(object):
         visa_resource (pyvisa.ResourceManager): All communication to/from the
             serial port is passed through `self.visa_resouce`, which is an
             instance of pyvisa's `ResourceManager` class.
+        last_set_positions_in_counts (defaultdict): A defaultdict used to store
+            the last position set for each actuator. This is used to support
+            labscript's smart programming, where outputs are only updated when
+            they are actually changed. The defaultdict is keyed by the single
+            hex digit addresses of the devices, and the values are either `None`
+            or the last position that the device was set to. Note that this may
+            be different than the actual position of the device due to noise in
+            the encoder.
     """
     # Properties that should be kept by subclasses.
     read_termination = '\r\n'
@@ -150,6 +159,9 @@ class _ElliptecInterface(object):
 
         # Connect to controller and configure communication settings.
         self.open_resource()
+
+        # Keep track of last set position for smart programming.
+        self.last_set_positions_in_counts = defaultdict(lambda: None)
 
     def open_resource(self):
         """Open a connection to the device.
@@ -452,6 +464,9 @@ class _ElliptecInterface(object):
     def home(self, address, clockwise=True):
         """Home the Elliptec device.
 
+        Note that calling this method clears the value stored for the given
+        address in `self.last_set_positions_in_counts`.
+
         Args:
             address (int): The bus address of a device, which should be an
                 integer between 0 and 15 inclusively.
@@ -463,6 +478,9 @@ class _ElliptecInterface(object):
             response (tuple): The tuple returned by `self.read()`. See that
                 method's documentation for more information.
         """
+        # Clear the value of the last set position.
+        self.last_set_positions_in_counts[address] = None
+
         # 0 for clockwise, 1 for counterclockwise.
         direction = str(int(not clockwise))
 
@@ -490,7 +508,7 @@ class _ElliptecInterface(object):
 
         return position_in_counts
 
-    def move(self, address, position_in_counts):
+    def move(self, address, position_in_counts, fresh=True):
         """Move the Elliptec device to the desired position.
 
         Args:
@@ -498,21 +516,41 @@ class _ElliptecInterface(object):
                 integer between 0 and 15 inclusively.
             position_in_counts (int): The desired position in encoder counts as
                 an integer.
+            fresh (bool, optional): (Default=`True`) If `fresh` is `False` and
+                the new set position is the same as the previous one (as stored
+                in self.last_set_positions_in_counts), then the device won't
+                actually be instructed to move. If `fresh` is `True` then the
+                device will be instructed to move even if it is set to the same
+                position as last time. This is implemented to support
+                labscript's smart programming.
 
         Returns:
-            response (tuple): The tuple returned by `self.read()`. See that
-                method's documentation for more information.
+            response (tuple): If the device was instructed to move, then the
+                tuple returned by `self.read()` will be returned. See that
+                method's documentation for more information. If the device was
+                not instructed to move, then `response` will be set to `None`.
         """
-        # Convert position to string in necessary format.
-        position_as_str = self._position_counts_to_str(position_in_counts)
+        last_set_position_in_counts = self.last_set_positions_in_counts[address]
+        if fresh or (position_in_counts != last_set_position_in_counts):
+            # Convert position to string in necessary format.
+            position_as_str = self._position_counts_to_str(position_in_counts)
 
-        # 'ma' for move absolute.
-        return_message = self.query(address, 'ma' + position_as_str)
+            # 'ma' for move absolute.
+            return_message = self.query(address, 'ma' + position_as_str)
+
+            # Update last set position.
+            self.last_set_positions_in_counts[address] = position_in_counts
+        else:
+            print(f"Used smart programming; didn't move.")
+            return_message = None
 
         return return_message
 
     def move_relative(self, address, relative_position_in_counts):
         """Move the Elliptec device by the desired amount.
+
+        Note that calling this method clears the value stored for the given
+        address in `self.last_set_positions_in_counts`.
 
         Args:
             address (int): The bus address of a device, which should be an
@@ -524,6 +562,9 @@ class _ElliptecInterface(object):
             response (tuple): The tuple returned by `self.read()`. See that
                 method's documentation for more information.
         """
+        # Clear the value of the last set position.
+        self.last_set_positions_in_counts[address] = None
+
         # Convert position to string in necessary format.
         position_as_str = self._position_counts_to_str(
             relative_position_in_counts
@@ -599,10 +640,13 @@ class ElliptecWorker(Worker):
                 connection)
         return remote_values
 
-    def program_manual(self, values):
+    def move(self, values, fresh=True):
         for connection, value in values.items():
-            self.controller.move(connection, value)
+            self.controller.move(connection, value, fresh=fresh)
         return self.check_remote_values()
+
+    def program_manual(self, values):
+        return self.move(values, fresh=True)
 
     def transition_to_buffered(
             self, device_name, h5file, initial_values, fresh):
@@ -613,7 +657,7 @@ class ElliptecWorker(Worker):
                 values = {name: data[0][name] for name in data.dtype.names}
             else:
                 values = {}
-        return self.program_manual(values)
+        return self.move(values, fresh=fresh)
 
     def transition_to_manual(self):
         return True
