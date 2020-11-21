@@ -80,9 +80,21 @@ class _MockElliptecInterface(MockZaberInterface):
             effectively move all virtaul devices to `position=1`.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Keep track of last set position for smart programming.
+        self.last_set_positions_in_counts = defaultdict(lambda: None)
+
     def home(self, address):
         self.position = 0
+        # Update last set position.
+        self.last_set_positions_in_counts[address] = None
         print(f"Mock device {address} homed.")
+
+    def move(self, address, position):
+        super().move(address, position)
+        # Update last set position.
+        self.last_set_positions_in_counts[address] = position
 
     def get_serial_number(self, address):
         return '12345678'
