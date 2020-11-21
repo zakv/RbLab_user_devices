@@ -234,6 +234,8 @@ class KDC101Worker(Worker):
         if not self.controller.is_homed:
             if self.allow_homing:
                 self.controller.home()
+                # Return to position set in GUI.
+                self._move(self.initial_front_panel_values, fresh=True)
             else:
                 self.controller.close()
                 message = """Device isn't homed and is not allowed to home.

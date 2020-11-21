@@ -65,6 +65,7 @@ class KDC101Tab(DeviceTab):
                 'mock': self.mock,
                 'kinesis_path': self.kinesis_path,
                 'child_connections': self.child_connections,
+                'initial_front_panel_values': self.get_front_panel_values(),
             },
         )
         self.primary_worker = 'main_worker'
