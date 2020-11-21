@@ -34,16 +34,21 @@ class _MockKDC101Interface(MockZaberInterface):
         self.serial_number = serial_number
         self.is_homed = False
         self.kinesis_path = kinesis_path
-        from collections import defaultdict
         self.position = 0
+        # Keep track of last set position for smart programming.
+        self.last_set_position = None
 
     def home(self):
         self.is_homed = True
         print("Mock device homed.")
 
-    def move(self, position):
-        print(f"Mock move device to position {position}")
-        self.position = position
+    def move(self, position, fresh=True):
+        if fresh or (position != self.last_set_position):
+            self.position = position
+            self.last_set_position = position
+            print(f"Mock moved device to position {position}.")
+        else:
+            print(f"Mock used smart programming; didn't move.")
 
     def get_position(self):
         return self.position
@@ -96,6 +101,9 @@ class _KDC101Interface(object):
 
         # Get the device unit converter.
         motor_configuration.UpdateCurrentConfiguration()
+
+        # Keep track of last set position for smart programming.
+        self.last_set_position = None
 
     def _import_python_libraries(self):
         # Import required python libraries.
@@ -185,11 +193,19 @@ class _KDC101Interface(object):
         self.controller.Home(self.default_timeout)
         print("Finshed Homing.")
 
-    def move(self, position):
+    def move(self, position, fresh=True):
         # System.Decimal doesn't handle numpy floats, so make sure it's a normal
         # built-in python float.
         position = float(position)
-        self.controller.MoveTo(System.Decimal(position), self.default_timeout)
+        if fresh or (position != self.last_set_position):
+            self.controller.MoveTo(
+                System.Decimal(position),
+                self.default_timeout,
+            )
+            self.last_set_position = position
+            print(f"Moved device to position {position}.")
+        else:
+            print(f"Used smart programming; didn't move.")
 
     def get_position(self):
         return float(str(self.controller.Position))
@@ -230,10 +246,13 @@ class KDC101Worker(Worker):
             remote_values[connection] = self.controller.get_position()
         return remote_values
 
-    def program_manual(self, values):
-        for _, value in values.items():
-            self.controller.move(value)
+    def _move(self, values, fresh=True):
+        for _, position in values.items():
+            self.controller.move(position, fresh=fresh)
         return self.check_remote_values()
+
+    def program_manual(self, values):
+        return self._move(values, fresh=True)
 
     def transition_to_buffered(
             self, device_name, h5file, initial_values, fresh):
@@ -244,7 +263,7 @@ class KDC101Worker(Worker):
                 values = {name: data[0][name] for name in data.dtype.names}
             else:
                 values = {}
-        return self.program_manual(values)
+        return self._move(values, fresh=fresh)
 
     def transition_to_manual(self):
         return True
