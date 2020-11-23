@@ -38,6 +38,10 @@ class _Agilent83650B():
         # Keep track of last set output settings for smart programming.
         self.last_set_values = defaultdict(lambda: None)
 
+        # Keep track of actual values output settings so they can be returned
+        # when using smart programming.
+        self.last_actual_values = defaultdict(lambda: None)
+
     def _import_python_libraries(self):
         # Import required python libraries.
         global pyvisa
@@ -154,6 +158,7 @@ class _Agilent83650B():
         # Set output to desired state.
         self.write(f':POWer:STATe {output_enabled_int}')
         self.last_set_values['output_enabled'] = output_enabled
+        self.last_actual_values['output_enabled'] = self.output_enabled
 
     def smart_set_output_enabled(self, output_enabled, fresh=False):
         if fresh or (output_enabled != self.last_set_values['output_enabled']):
@@ -161,6 +166,7 @@ class _Agilent83650B():
             print(f"Set ouptut_enabled to {output_enabled}.")
         else:
             print(f"Used smart programming; didn't change output_enabled.")
+        return self.last_actual_values['output_enabled']
 
     @property
     def frequency(self):
@@ -179,6 +185,7 @@ class _Agilent83650B():
         else:
             self.write(f':FREQuency:CW {frequency} Hz')
         self.last_set_values['frequency'] = frequency
+        self.last_actual_values['frequency'] = self.frequency
 
     def smart_set_frequency(self, frequency, fresh=False):
         if fresh or (frequency != self.last_set_values['frequency']):
@@ -186,6 +193,7 @@ class _Agilent83650B():
             print(f"Set frequency to {frequency}.")
         else:
             print("Used smart programming; didn't change frequency.")
+        return self.last_actual_values['frequency']
 
     @property
     def power(self):
@@ -198,6 +206,7 @@ class _Agilent83650B():
     def power(self, power):
         self.write(f':POWer:LEVel {power:.2f} dBm')
         self.last_set_values['power'] = power
+        self.last_actual_values['power'] = self.power
 
     def smart_set_power(self, power, fresh=False):
         if fresh or (power != self.last_set_values['power']):
@@ -205,6 +214,7 @@ class _Agilent83650B():
             print(f"Set power to {power}.")
         else:
             print("Used smart programming; didn't change power.")
+        return self.last_actual_values['power']
 
 
 class _MockAgilent83650B(_Agilent83650B):
@@ -287,17 +297,31 @@ class Agilent83650BWorker(Worker):
         return remote_values
 
     def set_output_settings(self, values, fresh=False):
+        actual_values = {}
         for connection, values_dict in values.items():
+            actual_values[connection] = {}
             # Set frequency.
             frequency = values_dict['freq']
-            self.synth.smart_set_frequency(frequency, fresh=fresh)
+            actual_frequency = self.synth.smart_set_frequency(
+                frequency,
+                fresh=fresh,
+            )
+            actual_values[connection]['freq'] = actual_frequency
             # Set power.
             power = values_dict['amp']
-            self.synth.smart_set_power(power, fresh=fresh)
+            actual_power = self.synth.smart_set_power(
+                power,
+                fresh=fresh,
+            )
+            actual_values[connection]['power'] = actual_power
             # Set output enabled.
             output_enabled = values_dict['gate']
-            self.synth.smart_set_output_enabled(output_enabled, fresh=fresh)
-        return self.check_remote_values()
+            actual_output_enabled = self.synth.smart_set_output_enabled(
+                output_enabled,
+                fresh=fresh,
+            )
+            actual_values[connection]['gate'] = actual_output_enabled
+        return actual_values
 
     def program_manual(self, values):
         return self.set_output_settings(values, fresh=True)
