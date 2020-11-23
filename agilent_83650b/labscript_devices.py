@@ -14,6 +14,8 @@ from labscript import (
 )
 import numpy as np
 
+from labscript_utils import dedent
+
 
 class Agilent83650BOutput(StaticDDS):
 
@@ -23,10 +25,15 @@ class Agilent83650BOutput(StaticDDS):
     @set_passed_properties(
         property_names={
             'connection_table_properties':
-                ['ramp_between_frequencies']
+                [
+                    'ramp_between_frequencies',
+                    'ramp_step_size',
+                    'ramp_min_step_duration',
+                ]
         }
     )
-    def __init__(self, name, parent_device, ramp_between_frequencies, **kwargs):
+    def __init__(self, name, parent_device, ramp_between_frequencies,
+                 ramp_step_size=None, ramp_min_step_duration=None, **kwargs):
         """The output of an Agilent 83650B Microwave Synthesizer.
 
         Args:
@@ -35,6 +42,17 @@ class Agilent83650BOutput(StaticDDS):
             **kwargs (optional): Keyword arguments will be passed to the
                 `__init__()` method of the parent class (StaticDDS).
         """
+        # Ensure settings are valid.
+        if ramp_between_frequencies:
+            if not ramp_step_size:
+                msg = """A value for ramp_step_size must be provided if
+                ramp_between_frequencies is True."""
+                raise ValueError(dedent(msg))
+            if not ramp_min_step_duration:
+                msg = """A value for ramp_min_step_duration must be provided if
+                ramp_between_frequencies is True."""
+                raise ValueError(dedent(msg))
+
         # This code is based on StaticDDS.__init__ but modified to account for
         # the fact that the "gate" doesn't have timing resolution and the fact
         # that the 83650B doesn't have a phase control.

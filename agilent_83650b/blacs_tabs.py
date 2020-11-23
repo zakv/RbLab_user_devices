@@ -57,6 +57,8 @@ class Agilent83650BTab(DeviceTab):
         children = list(device.child_list.values())
         output = children[0]
         self.ramp_between_frequencies = output.properties['ramp_between_frequencies']
+        self.ramp_step_size = output.properties['ramp_step_size']
+        self.ramp_min_step_duration = output.properties['ramp_min_step_duration']
 
         # Create list of parent ports for child connections.
         self.child_connections = [child.parent_port for child in children]
@@ -75,6 +77,8 @@ class Agilent83650BTab(DeviceTab):
                 'gpib_address': self.gpib_address,
                 'mock': self.mock,
                 'ramp_between_frequencies': self.ramp_between_frequencies,
+                'ramp_step_size': self.ramp_step_size,
+                'ramp_min_step_duration': self.ramp_min_step_duration,
                 'child_connections': self.child_connections,
             },
         )

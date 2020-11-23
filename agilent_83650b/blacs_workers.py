@@ -13,6 +13,7 @@ import time
 
 import labscript_utils.h5_lock  # Must be imported before importing h5py.
 import h5py
+import numpy as np
 
 from blacs.tab_base_classes import Worker
 from labscript_utils import dedent
@@ -24,11 +25,14 @@ pyvisa = None
 
 
 class _Agilent83650B():
-    def __init__(self, com_port, gpib_address, ramp_between_frequencies):
+    def __init__(self, com_port, gpib_address, ramp_between_frequencies,
+                 ramp_step_size=None, ramp_min_step_duration=None):
         # Store argument values.
         self.com_port = com_port
         self.gpib_address = gpib_address
         self.ramp_between_frequencies = ramp_between_frequencies
+        self.ramp_step_size = ramp_step_size
+        self.ramp_min_step_duration = ramp_min_step_duration
 
         # Get connection to the device going.
         self._import_python_libraries()
@@ -178,10 +182,28 @@ class _Agilent83650B():
     @frequency.setter
     def frequency(self, frequency):
         if self.ramp_between_frequencies:
-            # TODO: implement ramping between frequencies.
-            raise NotImplementedError(
-                "Ramping between frequencies is not yet implemented."
-            )
+            # Couldn't figure out how to make the synth stay at its final
+            # frequency when it was set to sweep; it always jumped back to the
+            # initial ramp frequency once the ramp finished. To circumvent that
+            # we'll do a software timed frequency ramp here.
+
+            # Generate a list of frequencies to set the output to.
+            start_frequency = self.frequency
+            stop_frequency = frequency
+            n_steps = (stop_frequency - start_frequency) / self.ramp_step_size
+            n_steps = abs(int(n_steps)) + 1
+            frequencies = np.linspace(start_frequency, stop_frequency, n_steps)
+
+            # Iterate over the frequencies, making sure to not issue commands
+            # within self.min_step_duration of each other.
+            for frequency in frequencies:
+                write_time = time.perf_counter()
+                self.write(f':FREQuency:CW {frequency} Hz')
+                write_duration = (time.perf_counter() - write_time)
+                sleep_duration = self.ramp_min_step_duration - write_duration
+                sleep_duration = max(sleep_duration, 0)
+            #     print(f"write_duration: {write_duration}, sleep_duration: {sleep_duration}")
+                time.sleep(sleep_duration)
         else:
             self.write(f':FREQuency:CW {frequency} Hz')
         self.last_set_values['frequency'] = frequency
@@ -218,11 +240,14 @@ class _Agilent83650B():
 
 
 class _MockAgilent83650B(_Agilent83650B):
-    def __init__(self, com_port, gpib_address, ramp_between_frequencies):
+    def __init__(self, com_port, gpib_address, ramp_between_frequencies,
+                 ramp_step_size, ramp_min_step_duration):
         # Store argument values.
         self.com_port = com_port
         self.gpib_address = gpib_address
         self.ramp_between_frequencies = ramp_between_frequencies
+        self.ramp_step_size = ramp_step_size
+        self.ramp_min_step_duration = ramp_min_step_duration
 
         # Keep track of last set output settings for smart programming.
         self.last_set_values = defaultdict(lambda: None)
@@ -277,12 +302,16 @@ class Agilent83650BWorker(Worker):
                 self.com_port,
                 self.gpib_address,
                 self.ramp_between_frequencies,
+                self.ramp_step_size,
+                self.ramp_min_step_duration,
             )
         else:
             self.synth = _Agilent83650B(
                 self.com_port,
                 self.gpib_address,
                 self.ramp_between_frequencies,
+                self.ramp_step_size,
+                self.ramp_min_step_duration,
             )
 
     def check_remote_values(self):
