@@ -278,7 +278,7 @@ class Agilent83650BWorker(Worker):
     def check_remote_values(self):
         remote_values = {}
         # There should only be one connection ('dds 0') but we'll iterate anyway
-        # to extract the value form the dictionary.
+        # to extract the value from the dictionary.
         for connection in self.child_connections:
             remote_values[connection] = {}
             remote_values[connection]['freq'] = self.synth.frequency
