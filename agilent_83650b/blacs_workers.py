@@ -37,7 +37,7 @@ class _Agilent83650B():
         # Get connection to the device going.
         self._import_python_libraries()
         self._open_resource()
-        self._configure_gpib_interface
+        self._configure_gpib_interface()
 
         # Keep track of last set output settings for smart programming.
         self.last_set_values = defaultdict(lambda: None)
