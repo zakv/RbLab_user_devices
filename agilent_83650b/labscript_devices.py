@@ -8,13 +8,16 @@
 # the project for the full license.                                 #
 #                                                                   #
 #####################################################################
+import warnings
+
+import numpy as np
+
 from labscript import (
     StaticDDS, StaticAnalogOut, StaticDigitalOut, Device, set_passed_properties,
     LabscriptError,
 )
-import numpy as np
-
 from labscript_utils import dedent
+from ._hardware_capabilities import agilent_83650b
 
 
 class Agilent83650BOutput(StaticDDS):
@@ -26,13 +29,16 @@ class Agilent83650BOutput(StaticDDS):
         property_names={
             'connection_table_properties':
                 [
+                    'frequency_limits',
+                    'power_limits',
                     'ramp_between_frequencies',
                     'ramp_step_size',
                     'ramp_min_step_duration',
                 ]
         }
     )
-    def __init__(self, name, parent_device, ramp_between_frequencies,
+    def __init__(self, name, parent_device, frequency_limits=None,
+                 power_limits=None, ramp_between_frequencies=False,
                  ramp_step_size=None, ramp_min_step_duration=None, **kwargs):
         """The output of an Agilent 83650B Microwave Synthesizer.
 
@@ -42,6 +48,12 @@ class Agilent83650BOutput(StaticDDS):
             **kwargs (optional): Keyword arguments will be passed to the
                 `__init__()` method of the parent class (StaticDDS).
         """
+        # Coerce any provided limits to be within the hardware limits
+        self.frequency_limits = self._coerce_set_frequency_limits(
+            frequency_limits,
+        )
+        self.power_limits = self._coerce_set_power_limits(power_limits)
+
         # Ensure settings are valid.
         if ramp_between_frequencies:
             if not ramp_step_size:
@@ -74,7 +86,7 @@ class Agilent83650BOutput(StaticDDS):
             name=self.name + '_freq',
             parent_device=self,
             connection='freq',
-            limits=None,
+            limits=self.frequency_limits,
             # unit_conversion_class=freq_conv_class,  # TODO
             # unit_conversion_parameters=freq_conv_params,
         )
@@ -82,7 +94,7 @@ class Agilent83650BOutput(StaticDDS):
             name=self.name + '_amp',
             parent_device=self,
             connection='amp',
-            limits=None,
+            limits=self.power_limits,
             # unit_conversion_class=amp_conv_class,  # TODO
             # unit_conversion_parameters=amp_conv_params,
         )
@@ -95,6 +107,60 @@ class Agilent83650BOutput(StaticDDS):
         # Now we call the parent's add_device method since we didn't do so
         # earlier in Device.__init__().
         self.parent_device.add_device(self)
+
+    def _coerce_set_frequency_limits(self, frequency_limits):
+        hardware_min = agilent_83650b['freq']['min']
+        hardware_max = agilent_83650b['freq']['max']
+        units = agilent_83650b['freq']['base_unit']
+        if frequency_limits:
+            set_min, set_max = frequency_limits
+            if set_min > hardware_min:
+                final_min = set_min
+            else:
+                msg = f"""Frequency minimum was set to {set_min} {units} but
+                    the hardware limit is {hardware_min} {units}. Coercing
+                    the set limit to be within hardware limits."""
+                warnings.warn(dedent(msg))
+                final_min = hardware_min
+            if set_max < hardware_max:
+                final_max = set_max
+            else:
+                msg = f"""Frequency maximum was set to {set_max} {units} but
+                    the hardware limit is {hardware_max} {units}. Coercing
+                    the set limit to be within hardware limits."""
+                warnings.warn(dedent(msg))
+                final_max = hardware_max
+            frequency_limits = (final_min, final_max)
+        else:
+            frequency_limits = (hardware_min, hardware_max)
+        return frequency_limits
+
+    def _coerce_set_power_limits(self, power_limits):
+        hardware_min = agilent_83650b['amp']['min']
+        hardware_max = agilent_83650b['amp']['max']
+        units = agilent_83650b['amp']['base_unit']
+        if power_limits:
+            set_min, set_max = power_limits
+            if set_min > hardware_min:
+                final_min = set_min
+            else:
+                msg = f"""Power minimum was set to {set_min} {units} but the
+                    hardware limit is {hardware_min} {units}. Coercing the set
+                    limit to be within hardware limits."""
+                warnings.warn(dedent(msg))
+                final_min = hardware_min
+            if set_max < hardware_max:
+                final_max = set_max
+            else:
+                msg = f"""Power maximum was set to {set_max} {units} but the
+                    hardware limit is {hardware_max} {units}. Coercing the set
+                    limit to be within hardware limits."""
+                warnings.warn(dedent(msg))
+                final_max = hardware_max
+            power_limits = (final_min, final_max)
+        else:
+            power_limits = (hardware_min, hardware_max)
+        return power_limits
 
     def setphase(self, value, units=None):
         raise LabscriptError("Agilent 83650B does not support phase control.")
