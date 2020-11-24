@@ -342,7 +342,7 @@ class Agilent83650BWorker(Worker):
                 power,
                 fresh=fresh,
             )
-            actual_values[connection]['power'] = actual_power
+            actual_values[connection]['amp'] = actual_power
             # Set output enabled.
             output_enabled = values_dict['gate']
             actual_output_enabled = self.synth.smart_set_output_enabled(
