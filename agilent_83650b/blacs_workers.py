@@ -37,6 +37,7 @@ class _Agilent83650B():
         # Get connection to the device going.
         self._import_python_libraries()
         self._open_resource()
+        self.visa_resource.timeout = 10000  # ms
         self._configure_gpib_interface()
 
         # Keep track of last set output settings for smart programming.
@@ -161,6 +162,8 @@ class _Agilent83650B():
         output_enabled_int = int(bool(output_enabled))
         # Set output to desired state.
         self.write(f':POWer:STATe {output_enabled_int}')
+        self.write('*OPC?')  # Wait until operation has completed
+        self.read()
         self.last_set_values['output_enabled'] = output_enabled
         self.last_actual_values['output_enabled'] = self.output_enabled
 
@@ -199,6 +202,8 @@ class _Agilent83650B():
             for frequency in frequencies:
                 write_time = time.perf_counter()
                 self.write(f':FREQuency:CW {frequency} Hz')
+                self.write('*OPC?')  # Wait until operation has completed
+                self.read()
                 write_duration = (time.perf_counter() - write_time)
                 sleep_duration = self.ramp_min_step_duration - write_duration
                 sleep_duration = max(sleep_duration, 0)
@@ -206,6 +211,8 @@ class _Agilent83650B():
                 time.sleep(sleep_duration)
         else:
             self.write(f':FREQuency:CW {frequency} Hz')
+            self.write('*OPC?')  # Wait until operation has completed
+            self.read()
         self.last_set_values['frequency'] = frequency
         self.last_actual_values['frequency'] = self.frequency
 
@@ -227,6 +234,8 @@ class _Agilent83650B():
     @power.setter
     def power(self, power):
         self.write(f':POWer:LEVel {power:.2f} dBm')
+        self.write('*OPC?')  # Wait until operation has completed
+        self.read()
         self.last_set_values['power'] = power
         self.last_actual_values['power'] = self.power
 
