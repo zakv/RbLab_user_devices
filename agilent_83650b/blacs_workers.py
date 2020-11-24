@@ -17,6 +17,7 @@ import numpy as np
 
 from blacs.tab_base_classes import Worker
 from labscript_utils import dedent
+from ._hardware_capabilities import agilent_83650b
 
 # Create module globals for importing device-specific libraries then we'll
 # import them later. That way labscript only needs those libraries installed if
@@ -33,6 +34,9 @@ class _Agilent83650B():
         self.ramp_between_frequencies = ramp_between_frequencies
         self.ramp_step_size = ramp_step_size
         self.ramp_min_step_duration = ramp_min_step_duration
+
+        # Store hardware capabilities.
+        self.capabilities = agilent_83650b
 
         # Get connection to the device going.
         self._import_python_libraries()
@@ -184,6 +188,16 @@ class _Agilent83650B():
 
     @frequency.setter
     def frequency(self, frequency):
+        # Ensure input is within the achievable range.
+        freq_min = self.capabilities['freq']['min']
+        freq_max = self.capabilities['freq']['max']
+        base_unit = self.capabilities['freq']['base_unit']
+        if frequency < freq_min or frequency > freq_max:
+            msg = f"""Frequency must be between {freq_min} {base_unit} and
+            {freq_max} {base_unit}, but was set to {frequency} {base_unit}."""
+            raise ValueError(dedent(msg))
+
+        # Send the signal(s) to adjust the frequency.
         if self.ramp_between_frequencies:
             # Couldn't figure out how to make the synth stay at its final
             # frequency when it was set to sweep; it always jumped back to the
@@ -232,6 +246,16 @@ class _Agilent83650B():
 
     @power.setter
     def power(self, power):
+        # Ensure power is within the achievable range.
+        amp_min = self.capabilities['amp']['min']
+        amp_max = self.capabilities['amp']['max']
+        base_unit = self.capabilities['amp']['base_unit']
+        if power < amp_min or power > amp_max:
+            msg = f"""Power must be between {amp_min} {base_unit} and {amp_max}
+            {base_unit}, but was set to {power} {base_unit}."""
+            raise ValueError(dedent(msg))
+
+        # Send the signal to set the power.
         self.write(f':POWer:LEVel {power:.2f} dBm')
         self.write('*OPC?')  # Wait until operation has completed
         self.read()
@@ -256,6 +280,9 @@ class _MockAgilent83650B(_Agilent83650B):
         self.ramp_between_frequencies = ramp_between_frequencies
         self.ramp_step_size = ramp_step_size
         self.ramp_min_step_duration = ramp_min_step_duration
+
+        # Store hardware capabilities.
+        self.capabilities = agilent_83650b
 
         # Keep track of last set output settings for smart programming.
         self.last_set_values = defaultdict(lambda: None)
@@ -289,6 +316,16 @@ class _MockAgilent83650B(_Agilent83650B):
 
     @frequency.setter
     def frequency(self, frequency):
+        # Ensure input is within the achievable range.
+        freq_min = self.capabilities['freq']['min']
+        freq_max = self.capabilities['freq']['max']
+        base_unit = self.capabilities['freq']['base_unit']
+        if frequency < freq_min or frequency > freq_max:
+            msg = f"""Frequency must be between {freq_min} {base_unit} and
+            {freq_max} {base_unit}, but was set to {frequency} {base_unit}."""
+            raise ValueError(dedent(msg))
+
+        # Store the mocked frequency setting.
         self._mock_frequency = frequency
         self.last_set_values['frequency'] = frequency
 
@@ -299,6 +336,16 @@ class _MockAgilent83650B(_Agilent83650B):
 
     @power.setter
     def power(self, power):
+        # Ensure power is within the achievable range.
+        amp_min = self.capabilities['amp']['min']
+        amp_max = self.capabilities['amp']['max']
+        base_unit = self.capabilities['amp']['base_unit']
+        if power < amp_min or power > amp_max:
+            msg = f"""Power must be between {amp_min} {base_unit} and {amp_max}
+            {base_unit}, but was set to {power} {base_unit}."""
+            raise ValueError(dedent(msg))
+
+        # Store the mocked power setting.
         self._mock_power = power
         self.last_set_values['power'] = power
 

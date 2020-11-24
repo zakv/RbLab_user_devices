@@ -9,34 +9,15 @@
 #                                                                   #
 #####################################################################
 from blacs.device_base_class import DeviceTab
+from ._hardware_capabilities import agilent_83650b
 
 
 class Agilent83650BTab(DeviceTab):
     def initialise_GUI(self):
-        # Capabilities
-        self.base_units = {'freq': 'Hz', 'amp': 'dBm'}
-        self.base_min = {'freq': 10e6, 'amp': -20}
-        self.base_max = {'freq': 50e9, 'amp': 10}
-        self.base_step = {'freq': 1., 'amp': 0.02}
-        self.base_decimals = {'freq': 0, 'amp': 2}
-        self.num_DDS = 1
-
         # Create DDS Output objects
         dds_prop = {'dds 0': {}}
-        dds_prop['dds 0']['freq'] = {
-            'base_unit': 'Hz',
-            'min': 10e6,
-            'max': 50e9,
-            'step': 1,
-            'decimals': 0,
-        }
-        dds_prop['dds 0']['amp'] = {
-            'base_unit': 'dBm',
-            'min': -20,
-            'max': 10,
-            'step': 0.2,
-            'decimals': 2,
-        }
+        dds_prop['dds 0']['freq'] = agilent_83650b['freq']
+        dds_prop['dds 0']['amp'] = agilent_83650b['amp']
         dds_prop['dds 0']['gate'] = {}
         self.create_dds_outputs(dds_prop)
 
