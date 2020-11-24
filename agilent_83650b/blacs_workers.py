@@ -207,7 +207,6 @@ class _Agilent83650B():
                 write_duration = (time.perf_counter() - write_time)
                 sleep_duration = self.ramp_min_step_duration - write_duration
                 sleep_duration = max(sleep_duration, 0)
-            #     print(f"write_duration: {write_duration}, sleep_duration: {sleep_duration}")
                 time.sleep(sleep_duration)
         else:
             self.write(f':FREQuency:CW {frequency} Hz')
