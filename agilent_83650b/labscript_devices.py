@@ -166,7 +166,7 @@ class Agilent83650B(Device):
             connection=None,
             **kwargs,
         )
-        self.BLACS_connection = f'{com_port},{gpib_address}'
+        self.BLACS_connection = f'{com_port},GPIB{gpib_address}'
 
     def generate_code(self, hdf5_file):
         super().generate_code(hdf5_file)
