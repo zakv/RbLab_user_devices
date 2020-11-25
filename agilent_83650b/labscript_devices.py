@@ -18,6 +18,7 @@ from labscript import (
 )
 from labscript_utils import dedent
 from ._hardware_capabilities import agilent_83650b
+from .frequency_converter import FrequencyConverter
 
 
 class Agilent83650BOutput(StaticDDS):
@@ -38,7 +39,9 @@ class Agilent83650BOutput(StaticDDS):
         }
     )
     def __init__(self, name, parent_device, frequency_limits=None,
-                 power_limits=None, ramp_between_frequencies=False,
+                 power_limits=None, frequency_conversion_class=None,
+                 frequency_conversion_params=None, power_conversion_class=None,
+                 power_conversion_params=None, ramp_between_frequencies=False,
                  ramp_step_size=None, ramp_min_step_duration=None, **kwargs):
         """The output of an Agilent 83650B Microwave Synthesizer.
 
@@ -82,21 +85,34 @@ class Agilent83650BOutput(StaticDDS):
             call_parents_add_device=False,
             **kwargs)
 
+        # Ask the parent device if it has default unit conversion classes it
+        # would like us to use:
+        if hasattr(parent_device, 'get_default_unit_conversion_classes'):
+            classes = parent_device.get_default_unit_conversion_classes(self)
+            default_frequency_conversion, default_power_conversion_class = classes
+            # If the user has not overridden, use these defaults. If
+            # the parent does not have a default for one or more of amp,
+            # freq or phase, it should return None for them.
+            if frequency_conversion_class is None:
+                frequency_conversion_class = default_frequency_conversion
+            if power_conversion_class is None:
+                power_conversion_class = default_power_conversion_class
+
         self.frequency = StaticAnalogOut(
             name=self.name + '_freq',
             parent_device=self,
             connection='freq',
             limits=self.frequency_limits,
-            # unit_conversion_class=freq_conv_class,  # TODO
-            # unit_conversion_parameters=freq_conv_params,
+            unit_conversion_class=frequency_conversion_class,
+            unit_conversion_parameters=frequency_conversion_params,
         )
         self.amplitude = StaticAnalogOut(
             name=self.name + '_amp',
             parent_device=self,
             connection='amp',
             limits=self.power_limits,
-            # unit_conversion_class=amp_conv_class,  # TODO
-            # unit_conversion_parameters=amp_conv_params,
+            unit_conversion_class=power_conversion_class,
+            unit_conversion_parameters=power_conversion_params,
         )
         self.output_enabled = StaticDigitalOut(
             name=self.name + '_enabled',
@@ -233,6 +249,20 @@ class Agilent83650B(Device):
             **kwargs,
         )
         self.BLACS_connection = f'{com_port},GPIB{gpib_address}'
+
+    def get_default_unit_conversion_classes(self, device):
+        """Get default unit converters for outputs.
+
+        Child devices call this during their `__init__()` (with themselves as
+        the argument) to check if there are certain unit calibration classes
+        that they should apply to their outputs, if the user has not otherwise
+        specified a calibration class.
+
+        This method was taken from NovaTechDDS9M.py's NovaTechDDS9M class's
+        implementation of this method. Returned converters are for frequency and
+        power respectively.
+        """
+        return FrequencyConverter, None
 
     def generate_code(self, hdf5_file):
         super().generate_code(hdf5_file)
