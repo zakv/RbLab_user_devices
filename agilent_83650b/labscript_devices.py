@@ -83,7 +83,8 @@ class Agilent83650BOutput(StaticDDS):
             parent_device=parent_device,
             connection='dds 0',
             call_parents_add_device=False,
-            **kwargs)
+            **kwargs,
+        )
 
         # Ask the parent device if it has default unit conversion classes it
         # would like us to use:
