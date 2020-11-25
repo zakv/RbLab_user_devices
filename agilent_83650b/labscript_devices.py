@@ -45,11 +45,79 @@ class Agilent83650BOutput(StaticDDS):
                  ramp_step_size=None, ramp_min_step_duration=None, **kwargs):
         """The output of an Agilent 83650B Microwave Synthesizer.
 
+        See the `README.md` in the directory containing this file for more
+        information including example connection table entries and example
+        commands that can be run in a labscript.
+
         Args:
-            *args (optional): These arguments will be passed to the `__init__()`
-                method of the parent class (StaticDDS).
-            **kwargs (optional): Keyword arguments will be passed to the
-                `__init__()` method of the parent class (StaticDDS).
+            name (str): The name for the output, used when setting the
+                amplitude, etc. in a labscript.
+            parent_device (Agilenth83650B): The instance of the `Agilent83650B`
+                for which this is the output.
+            frequency_limits (tuple of two floats, optional): (Default=`None`)
+                The minimum and maximum frequency respectively to allow for the
+                output. If set to a value outside of the hardware limits of the
+                device, a warning will be printed and the values will be coerced
+                to the device's achievable range. This argument can be used to
+                restrict the output frequency to a range smaller than that
+                achievable by the hardware. If set to `None` then the frequency
+                limits will be set equal to the hardware limits, giving the
+                output its maximum possible range.
+            power_limits (tuple of two floats, optional): (Default=`None`) The
+                minimum and maximum power respectively to allow for the output.
+                If set to a value outside of the hardware limits of the device,
+                a warning will be printed and the values will be coerced to the
+                device's achievable range. This argument can be used to restrict
+                the output power to a range smaller than that achievable by the
+                hardware. If set to `None` then the power limits will be set
+                equal to the hardware limits, giving the output its maximum
+                possible range.
+            frequency_conversion_class (UnitConversion, optional):
+                (Default=`None`) The conversion class to use for the frequency,
+                which makes it possible to set the output in units other than
+                the base units, which are Hz. If set to `None` then the
+                `FrequencyConverter` class from `frequency_converter.py` in the
+                same directory as this file will be used.
+            frequency_conversion_params (dict, optional): (Default=`None`)
+                Arguments to pass to the `frequency_conversion_class` during its
+                initialization.
+            power_conversion_class (UnitConversion, optional): (Default=`None`)
+                The conversion class to use for the output power, which makes it
+                possible to set the output in units other than the base unit,
+                which is dBm. If set to `None`, then no unit conversion class
+                will be used.
+            power_conversion_params (dict, optional): (Default=`None`) Arguments
+                to pass to the `power_conversion_class` during its
+                initialization.
+            ramp_between_frequencies (bool, optional): (Default=`False`) If
+                `False`, then whenever the output frequency is instructed to
+                change, it will discretely jump to the new frequency. If set to
+                `True`, the the output will instead ramp to the new values. This
+                can be useful for example if suddenly jumping the frequency may
+                throw a laser out of lock.
+            ramp_step_size (float, optional): (Default=`None`) The size of the
+                frequency steps to use when ramping the output frequency. This
+                only has an effect if `ramp_between_frequencies` is set to
+                `True`. If `ramp_between_frequencies` is set to `True` then a
+                value for `ramp_step_size` must be provided, otherwise a
+                `ValueError` will be raised.
+            ramp_min_step_duration ([type], optional): (Default=`None`) The
+                minimum amount of time to stay at one frequency before moving to
+                the next during a frequency ramp of the output. This only has an
+                effect if `ramp_between_frequencies` is set to `True`. The
+                actual amount of time spent at any given output frequency may be
+                longer due to the amount of time it takes for the output
+                frequency to change .If `ramp_between_frequencies` is set to
+                `True` then a value for `ramp_min_step_duration` must be
+                provided, otherwise a `ValueError` will be raised.
+            **kwargs (optional): Additional keyword arguments will be passed to
+                `Device.__init__()`.
+
+        Raises:
+            ValueError: A `ValueError` is raised if `ramp_between_frequencies`
+                is `True` but no value is provided for `ramp_step_size`.
+            ValueError: A `ValueError` is raised if `ramp_between_frequencies`
+                is `True` but no value is provided for `ramp_min_step_duration`.
         """
         # Coerce any provided limits to be within the hardware limits
         self.frequency_limits = self._coerce_set_frequency_limits(
@@ -232,16 +300,16 @@ class Agilent83650B(Device):
 
         Args:
             name (str): The name to give to this Agilent 83650B.
-            com_port (str): The COM port, e.g. 'COM1', of the prologix USB-GPIB
-                converter used to connect to the Agilent 83650B.
-            gpib_address (int): The address of the Agilent 83650B on the GIPB
+            com_port (str): The COM port, e.g. `'COM1'`, of the prologix
+                USB-GPIB converter used to connect to the Agilent 83650B.
+            gpib_address (int): The address of the Agilent 83650B on the GPIB
                 bus.
-            mock (bool, optional): (Default=False) If set to True then no real
-                Agilent 83650B will be used. Instead a dummy that simply prints
-                what a real synth would do is used instead. This is helpful for
-                testing and development.
+            mock (bool, optional): (Default=`False`) If set to `True` then no
+                real Agilent 83650B will be used. Instead a dummy that simply
+                prints what a real synth would do is used instead. This is
+                helpful for testing and development.
             **kwargs: Further keyword arguents are passed to the `__init__()`
-                method of the parent class (Device).
+                method of the parent class (`Device`).
         """
         super().__init__(
             name=name,
