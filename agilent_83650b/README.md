@@ -113,3 +113,13 @@ The ramps can take a while to complete.
 Therefore when scanning the output frequency and other parameters with runmanager, it is best to make output frequency be the outermost loop.
 That makes the output frequency change less often, which can greatly reduce the amount of time spent changing the output frequency.
 This is particularly true given that this device supports smart programming so no commands at all are sent if the output is already configured correctly for the upcoming shot.
+
+### Local Lockout
+
+When the Agilent 83650B receives a command over the GPIB bus, it locks the front panel of the synthesizer.
+That means that it will ignore button presses on the device itself so that e.g. the frequency can't be changed manually.
+To allow manual operation again, press the "LOCAL" button on the device, which will make the synthesizer respond to button presses on its front panel again.
+
+Note that because this code supports remote value checks, it will poll the device's current settings periodically.
+Each time the settings are polled, commands are sent over the GPIB bus, which locks the synthesizer's front panel again.
+To allow manual operation for extended periods without needing to frequently press the "LOCAL" button, be sure to close blacs to prevent it from polling the device's settings periodically.
