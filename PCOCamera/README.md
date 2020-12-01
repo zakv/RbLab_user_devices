@@ -73,9 +73,12 @@ If that code isn't compiled, the error code will simply be returned to the user 
 
 * The PCO SDK's built-in logging can be enabled by creating a blank text file called `C:\ProgramData\pco\SC2_Cam.log`, which can be helpful when debugging.
 Logging can significantly slow down performance however, so delete, move, or rename the log file when done debugging.
+Doing so will disable logging.
 
 ## Known Issues/Limitations
 
+* Not long after this device code was written, PCO release official python wrappers for their libraries, available on PyPI.
+In the future the code here should be upgraded to use that rather than depend on `instrumental`, which should resolve some of the issues below.
 * Not all of the functions in the PCO SDK have been wrapped.
 If you need access to any additional PCO SDK functions, let us know.
 * The files `lextab.py` and `yacctab.py` can sometimes be created in your working directory.
