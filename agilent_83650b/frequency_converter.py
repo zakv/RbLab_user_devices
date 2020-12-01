@@ -12,7 +12,7 @@ class FrequencyConverter(UnitConversion):
     def __init__(self, params=None):
         if params is None:
             params = {}
-        if 'magntiudes' not in params:
+        if 'magnitudes' not in params:
             params['magnitudes'] = ['k', 'M', 'G']
         super().__init__(params)
 
